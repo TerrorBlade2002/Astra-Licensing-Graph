@@ -1,0 +1,164 @@
+"""Shared test fixtures.
+
+Integration and API tests run against a real PostgreSQL database
+(``TEST_DATABASE_URL``, default: the compose-provisioned astra_licensing_test).
+The schema is created once per session via Alembic; tables are truncated
+before each test for determinism.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import os
+import uuid
+from collections.abc import AsyncIterator, Iterator
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
+
+import asyncpg
+import pytest
+from alembic import command
+from alembic.config import Config
+from asgi_lifespan import LifespanManager
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
+from sqlalchemy.pool import NullPool
+
+from app.core.config import Settings
+from app.main import create_app
+from app.models import Base, Email, Mailbox
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+DEFAULT_TEST_DATABASE_URL = (
+    "postgresql+asyncpg://astra:astra_local_dev@localhost:5442/astra_licensing_test"
+)
+
+
+def _test_database_url() -> str:
+    return os.environ.get("TEST_DATABASE_URL", DEFAULT_TEST_DATABASE_URL)
+
+
+async def _ensure_database_exists(url: str) -> None:
+    # Connect to the maintenance database on the same server and create the
+    # test database when the compose init script has not provisioned it.
+    dsn = url.replace("postgresql+asyncpg://", "postgresql://")
+    base, _, dbname = dsn.rpartition("/")
+    admin = await asyncpg.connect(f"{base}/postgres")
+    try:
+        exists = await admin.fetchval("SELECT 1 FROM pg_database WHERE datname = $1", dbname)
+        if not exists:
+            await admin.execute(f'CREATE DATABASE "{dbname}"')
+    finally:
+        await admin.close()
+
+
+@pytest.fixture(scope="session")
+def test_database_url() -> str:
+    return _test_database_url()
+
+
+@pytest.fixture(scope="session")
+def alembic_config(test_database_url: str) -> Config:
+    cfg = Config(str(PROJECT_ROOT / "alembic.ini"))
+    cfg.set_main_option("sqlalchemy.url", test_database_url)
+    return cfg
+
+
+@pytest.fixture(scope="session", autouse=True)
+def migrated_database(test_database_url: str, alembic_config: Config) -> Iterator[None]:
+    asyncio.run(_ensure_database_exists(test_database_url))
+    os.environ["DATABASE_URL"] = test_database_url
+    command.upgrade(alembic_config, "head")
+    yield
+
+
+@pytest.fixture
+async def engine(test_database_url: str) -> AsyncIterator[AsyncEngine]:
+    # NullPool: one engine per test function, no cross-event-loop reuse.
+    engine = create_async_engine(test_database_url, poolclass=NullPool)
+    yield engine
+    await engine.dispose()
+
+
+@pytest.fixture
+async def session_factory(engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    async with engine.begin() as conn:
+        tables = ", ".join(f'"{t.name}"' for t in Base.metadata.sorted_tables)
+        await conn.execute(text(f"TRUNCATE {tables} RESTART IDENTITY CASCADE"))
+    return async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+
+
+@pytest.fixture
+async def session(
+    session_factory: async_sessionmaker[AsyncSession],
+) -> AsyncIterator[AsyncSession]:
+    async with session_factory() as s:
+        yield s
+
+
+def make_test_settings(database_url: str, **overrides: Any) -> Settings:
+    values: dict[str, Any] = {
+        "APP_ENV": "test",
+        "DATABASE_URL": database_url,
+        "LOG_FORMAT": "console",
+        "AUTH_MODE": "development",
+    }
+    values.update(overrides)
+    return Settings(**values)
+
+
+@pytest.fixture
+def app(test_database_url: str, session_factory: async_sessionmaker[AsyncSession]) -> FastAPI:
+    return create_app(make_test_settings(test_database_url))
+
+
+@pytest.fixture
+async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
+    async with LifespanManager(app):
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://testserver") as c:
+            yield c
+
+
+# ------------------------------------------------------------------ factories
+
+
+async def create_mailbox(
+    session: AsyncSession, address: str = "astralicensing@astraglobal.com"
+) -> Mailbox:
+    mailbox = Mailbox(id=uuid.uuid4(), address=address.lower(), display_name="Test Mailbox")
+    session.add(mailbox)
+    await session.flush()
+    return mailbox
+
+
+async def create_email(
+    session: AsyncSession,
+    mailbox: Mailbox,
+    *,
+    graph_message_id: str | None = None,
+    processing_state: str = "DISCOVERED",
+    **overrides: Any,
+) -> Email:
+    email = Email(
+        id=uuid.uuid4(),
+        mailbox_id=mailbox.id,
+        graph_message_id=graph_message_id or f"SYNTH-MSG-{uuid.uuid4().hex[:12]}",
+        subject=overrides.pop("subject", "Test subject"),
+        sender_email=overrides.pop("sender_email", "sender@example.invalid"),
+        received_at=overrides.pop("received_at", datetime(2026, 7, 20, 12, 0, tzinfo=UTC)),
+        processing_state=processing_state,
+        **overrides,
+    )
+    session.add(email)
+    await session.flush()
+    return email

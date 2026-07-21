@@ -1,0 +1,1 @@
+"""Astra Licensing Automation backend."""

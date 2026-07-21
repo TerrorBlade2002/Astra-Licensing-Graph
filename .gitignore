@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Prototype runtime data (contains real Graph IDs and mailbox content)
+prototype-data/
+attachments/
+
+# Editor/OS
+.idea/
+.vscode/
+Thumbs.db

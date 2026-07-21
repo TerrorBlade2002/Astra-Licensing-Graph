@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: astra
+      POSTGRES_PASSWORD: astra_local_dev   # local development only; never reused elsewhere
+      POSTGRES_DB: astra_licensing
+    ports:
+      # Host port 5442: the current dev box already uses 5432 (native
+      # PostgreSQL service) and 5433/5434/5439 (other containers).
+      - "5442:5432"
+    volumes:
+      - astra_pg_data:/var/lib/postgresql/data
+      - ./scripts/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U astra -d astra_licensing"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+asyncpg://astra:astra_local_dev@db:5432/astra_licensing
+      LOG_FORMAT: json
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request;urllib.request.urlopen('http://localhost:8000/health/live')\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  astra_pg_data:
