@@ -1,0 +1,185 @@
+.....................F.................................................. [ 29%]
+........................................................................ [ 58%]
+.................................F...................................... [ 87%]
+...............................                                          [100%]
+================================== FAILURES ===================================
+_____________________________ test_system_version _____________________________
+
+client = <httpx.AsyncClient object at 0x000002146F1787D0>
+
+    async def test_system_version(client: AsyncClient) -> None:
+        response = await client.get("/api/v1/system/version")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["app_name"]
+        assert body["environment"] == "test"
+>       assert body["migration_revision"] == "0001"
+E       AssertionError: assert '0002' == '0001'
+E         
+E         - 0001
+E         ?    ^
+E         + 0002
+E         ?    ^
+
+tests\api\test_health_and_errors.py:79: AssertionError
+_____________________ test_valid_production_settings_pass _____________________
+
+    def test_valid_production_settings_pass() -> None:
+>       settings = _settings(APP_ENV="production", AUTH_MODE="entra")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests\unit\test_config_and_schemas.py:53: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\unit\test_config_and_schemas.py:19: in _settings
+    return Settings(_env_file=None, **values)  # type: ignore[call-arg]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+__pydantic_self__ = Settings(app_name='astra-licensing-automation', app_env='production', app_version='0.1.0', api_v1_prefix='/api/v1', da...n/vnd.ms-excel', 'application/zip', 'application/octet-stream', 'message/rfc822'], quarantine_unknown_attachments=True)
+_case_sensitive = None, _nested_model_default_partial_update = None
+_env_prefix = None, _env_prefix_target = None, _env_file = None
+_env_file_encoding = None, _env_ignore_empty = None
+_env_nested_delimiter = None, _env_nested_max_split = None
+_env_parse_none_str = None, _env_parse_enums = None, _cli_prog_name = None
+_cli_parse_args = None, _cli_settings_source = None, _cli_parse_none_str = None
+_cli_hide_none_type = None, _cli_avoid_json = None, _cli_enforce_required = None
+_cli_use_class_docs_for_groups = None, _cli_exit_on_error = None
+_cli_prefix = None, _cli_flag_prefix_char = None, _cli_implicit_flags = None
+_cli_ignore_unknown_args = None, _cli_kebab_case = None, _cli_shortcuts = None
+_secrets_dir = None, _build_sources = None
+values = {'APP_ENV': 'production', 'AUTH_MODE': 'entra', 'DATABASE_URL': 'postgresql+asyncpg://u:p@localhost:5442/db'}
+sources = (InitSettingsSource(init_kwargs={'APP_ENV': 'production', 'DATABASE_URL': 'postgresql+asyncpg://u:p@localhost:5442/db'...efix_len=0), SecretsSettingsSource(secrets_dir=None), DefaultSettingsSource(nested_model_default_partial_update=False))
+init_kwargs = {'APP_ENV': 'production', 'AUTH_MODE': 'entra', 'DATABASE_URL': 'postgresql+asyncpg://u:p@localhost:5442/db'}
+
+    def __init__(
+        __pydantic_self__,
+        _case_sensitive: bool | None = None,
+        _nested_model_default_partial_update: bool | None = None,
+        _env_prefix: str | None = None,
+        _env_prefix_target: EnvPrefixTarget | None = None,
+        _env_file: DotenvType | None = ENV_FILE_SENTINEL,
+        _env_file_encoding: str | None = None,
+        _env_ignore_empty: bool | None = None,
+        _env_nested_delimiter: str | None = None,
+        _env_nested_max_split: int | None = None,
+        _env_parse_none_str: str | None = None,
+        _env_parse_enums: bool | None = None,
+        _cli_prog_name: str | None = None,
+        _cli_parse_args: bool | list[str] | tuple[str, ...] | None = None,
+        _cli_settings_source: CliSettingsSource[Any] | None = None,
+        _cli_parse_none_str: str | None = None,
+        _cli_hide_none_type: bool | None = None,
+        _cli_avoid_json: bool | None = None,
+        _cli_enforce_required: bool | None = None,
+        _cli_use_class_docs_for_groups: bool | None = None,
+        _cli_exit_on_error: bool | None = None,
+        _cli_prefix: str | None = None,
+        _cli_flag_prefix_char: str | None = None,
+        _cli_implicit_flags: bool | Literal['dual', 'toggle'] | None = None,
+        _cli_ignore_unknown_args: bool | None = None,
+        _cli_kebab_case: bool | Literal['all', 'no_enums'] | None = None,
+        _cli_shortcuts: Mapping[str, str | list[str]] | None = None,
+        _secrets_dir: PathType | None = None,
+        _build_sources: tuple[tuple[PydanticBaseSettingsSource, ...], dict[str, Any]] | None = None,
+        **values: Any,
+    ) -> None:
+        sources, init_kwargs = (
+            _build_sources
+            if _build_sources is not None
+            else __pydantic_self__.__class__._settings_init_sources(
+                _case_sensitive=_case_sensitive,
+                _nested_model_default_partial_update=_nested_model_default_partial_update,
+                _env_prefix=_env_prefix,
+                _env_prefix_target=_env_prefix_target,
+                _env_file=_env_file,
+                _env_file_encoding=_env_file_encoding,
+                _env_ignore_empty=_env_ignore_empty,
+                _env_nested_delimiter=_env_nested_delimiter,
+                _env_nested_max_split=_env_nested_max_split,
+                _env_parse_none_str=_env_parse_none_str,
+                _env_parse_enums=_env_parse_enums,
+                _cli_prog_name=_cli_prog_name,
+                _cli_parse_args=_cli_parse_args,
+                _cli_settings_source=_cli_settings_source,
+                _cli_parse_none_str=_cli_parse_none_str,
+                _cli_hide_none_type=_cli_hide_none_type,
+                _cli_avoid_json=_cli_avoid_json,
+                _cli_enforce_required=_cli_enforce_required,
+                _cli_use_class_docs_for_groups=_cli_use_class_docs_for_groups,
+                _cli_exit_on_error=_cli_exit_on_error,
+                _cli_prefix=_cli_prefix,
+                _cli_flag_prefix_char=_cli_flag_prefix_char,
+                _cli_implicit_flags=_cli_implicit_flags,
+                _cli_ignore_unknown_args=_cli_ignore_unknown_args,
+                _cli_kebab_case=_cli_kebab_case,
+                _cli_shortcuts=_cli_shortcuts,
+                _secrets_dir=_secrets_dir,
+                _init_kwargs=values,
+            )
+        )
+    
+>       super().__init__(**__pydantic_self__.__class__._settings_build_values(sources, init_kwargs))
+E       pydantic_core._pydantic_core.ValidationError: 1 validation error for Settings
+E         Value error, EVIDENCE_STORAGE_BACKEND=filesystem is not allowed in production; PUBLIC_BASE_URL must not point at localhost outside local/test; PUBLIC_BASE_URL must use HTTPS outside local/test [type=value_error, input_value={'APP_ENV': 'production',...', 'AUTH_MODE': 'entra'}, input_type=dict]
+E           For further information visit https://errors.pydantic.dev/2.13/v/value_error
+
+.venv\Lib\site-packages\pydantic_settings\main.py:247: ValidationError
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.13.7-final-0 _______________
+
+Name                                      Stmts   Miss  Cover   Missing
+-----------------------------------------------------------------------
+app\api\dependencies.py                      25      1  96.0%   52
+app\api\errors.py                            26      3  88.5%   58, 65-66
+app\api\v1\audit.py                          14      1  92.9%   44
+app\api\v1\emails.py                         28      4  85.7%   64-67
+app\api\v1\graph_jobs.py                     57     18  68.4%   71, 73, 77, 79-86, 103-104, 106-122, 139-159
+app\api\v1\graph_status.py                   24      8  66.7%   32-64
+app\api\v1\graph_subscriptions.py            36     14  61.1%   51, 66-100
+app\api\v1\mailboxes.py                      25      7  72.0%   20, 26-30, 39-43
+app\api\v1\router.py                         27      4  85.2%   38-41
+app\cli\graph_diagnostics.py                 52     52   0.0%   3-96
+app\cli\graph_subscriptions.py               91     91   0.0%   10-140
+app\cli\graph_sync.py                        54     54   0.0%   3-110
+app\cli\graph_worker.py                       5      5   0.0%   3-10
+app\cli\import_prototype.py                  34      1  97.1%   54
+app\cli\seed_dev.py                          59     13  78.0%   223-234, 238, 242
+app\core\config.py                          140      5  96.4%   180, 212, 214, 220, 234
+app\core\logging.py                          73     10  86.3%   78-91, 99-101
+app\evidence\filenames.py                    28      1  96.4%   48
+app\evidence\filesystem.py                   71      4  94.4%   26, 88, 107-108
+app\graph\auth.py                            56     12  78.6%   42-65
+app\graph\client.py                         163     26  84.0%   51, 97, 162, 221-223, 293, 297, 307-309, 344-346, 348, 353-367, 379-385
+app\graph\retry.py                           31      1  96.8%   46
+app\graph\subscriptions.py                   27      1  96.3%   54
+app\graph\urls.py                            43      7  83.7%   34-38, 45-46
+app\jobs\leasing.py                          22      4  81.8%   19-22, 26, 67
+app\jobs\repository.py                      119     12  89.9%   95-106, 121, 128
+app\jobs\service.py                          41      3  92.7%   25-26, 92
+app\main.py                                  42      1  97.6%   50
+app\repositories\emails.py                   44      7  84.1%   20, 26, 28, 64, 73, 82, 90
+app\repositories\events.py                   30      7  76.7%   44, 46, 48, 50, 52, 56-61
+app\repositories\mailboxes.py                26      2  92.3%   16, 50
+app\repositories\tasks.py                    39      9  76.9%   22, 24, 28, 48-53, 62, 65-68, 71
+app\services\email_ingestion.py             198     13  93.4%   84, 87, 94, 129, 190, 213, 264, 274, 282, 365-368
+app\services\email_state.py                  67      3  95.5%   39-40, 132
+app\services\graph_notifications.py         132     65  50.8%   49-50, 65-78, 92, 107-116, 121-183, 199-224, 254-276, 287, 309-315, 327, 336-342
+app\services\graph_subscriptions.py         176     30  83.0%   43, 77, 107-113, 121, 188, 197-201, 217, 232-234, 257-269, 304-305, 321-322
+app\services\graph_sync.py                  173      6  96.5%   77, 108, 221-222, 324, 332
+app\services\prototype_import.py            260     32  87.7%   73, 80-93, 195-196, 219, 243, 274, 363, 371, 382, 396, 400, 423, 443, 446, 496, 499, 527, 530, 533, 575
+app\services\task_queries.py                 47     22  53.2%   32, 45-66, 74, 85-87
+app\webhooks\graph_messages.py               56      5  91.1%   36, 42, 79-93
+app\workers\context.py                       30      1  96.7%   25
+app\workers\email_ingestion.py               13      1  92.3%   17
+app\workers\graph_sync.py                    13      1  92.3%   16
+app\workers\runner.py                       127     54  57.5%   57-73, 101, 116-117, 134-139, 152, 156, 171, 173-183, 187-190, 192-194, 198-204, 206, 210, 212-221, 225-232, 236
+app\workers\scheduling.py                    74     74   0.0%   11-140
+app\workers\subscription_maintenance.py      18      8  55.6%   19-37
+-----------------------------------------------------------------------
+TOTAL                                      4158    703  83.1%
+
+61 files skipped due to complete coverage.
+=========================== short test summary info ===========================
+FAILED tests/api/test_health_and_errors.py::test_system_version - AssertionEr...
+FAILED tests/unit/test_config_and_schemas.py::test_valid_production_settings_pass
+2 failed, 245 passed in 142.40s (0:02:22)

@@ -5,7 +5,15 @@ from __future__ import annotations
 from fastapi import APIRouter, Request
 from sqlalchemy import text
 
-from app.api.v1 import audit, emails, mailboxes, tasks
+from app.api.v1 import (
+    audit,
+    emails,
+    graph_jobs,
+    graph_status,
+    graph_subscriptions,
+    mailboxes,
+    tasks,
+)
 from app.schemas.event import SystemVersionOut
 
 api_router = APIRouter()
@@ -13,6 +21,9 @@ api_router.include_router(mailboxes.router)
 api_router.include_router(emails.router)
 api_router.include_router(tasks.router)
 api_router.include_router(audit.router)
+api_router.include_router(graph_status.router)
+api_router.include_router(graph_jobs.router)
+api_router.include_router(graph_subscriptions.router)
 
 system_router = APIRouter(prefix="/system", tags=["system"])
 

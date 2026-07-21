@@ -1,5 +1,5 @@
 # Cross-platform convenience targets (mirrors scripts/*.ps1 for Windows users).
-.PHONY: db install migrate seed run test lint type fmt check import-prototype
+.PHONY: db install migrate seed run worker scheduler test lint type fmt check import-prototype
 
 db:
 	docker compose up -d db
@@ -15,6 +15,12 @@ seed:
 
 run:
 	uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
+
+worker:
+	python -m app.workers.runner --queues subscriptions,sync,ingestion
+
+scheduler:
+	python -m app.workers.scheduling
 
 test:
 	pytest --cov=app --cov-fail-under=85

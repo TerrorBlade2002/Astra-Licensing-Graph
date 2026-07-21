@@ -76,4 +76,4 @@ async def test_system_version(client: AsyncClient) -> None:
     body = response.json()
     assert body["app_name"]
     assert body["environment"] == "test"
-    assert body["migration_revision"] == "0001"
+    assert body["migration_revision"] == "0002"

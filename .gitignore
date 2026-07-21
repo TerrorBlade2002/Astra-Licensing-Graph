@@ -19,6 +19,9 @@ htmlcov/
 prototype-data/
 attachments/
 
+# Local evidence store (mail content; never committed)
+evidence/
+
 # Editor/OS
 .idea/
 .vscode/

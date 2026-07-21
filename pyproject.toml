@@ -17,6 +17,9 @@ dependencies = [
     "asyncpg>=0.30,<0.31",
     "alembic>=1.14,<2",
     "uvicorn[standard]>=0.32,<1",
+    "httpx>=0.28,<1",
+    "msal>=1.31,<2",
+    "prometheus-client>=0.21,<1",
 ]
 
 [project.optional-dependencies]
@@ -25,6 +28,7 @@ dev = [
     "pytest-asyncio>=0.25,<2",
     "pytest-cov>=6,<8",
     "httpx>=0.28,<1",
+    "respx>=0.22,<1",
     "ruff>=0.8",
     "mypy>=1.13,<2",
     "asgi-lifespan>=2.1,<3",
@@ -71,7 +75,7 @@ show_error_codes = true
 exclude = ["prototype-data", "attachments", "\\.venv"]
 
 [[tool.mypy.overrides]]
-module = ["asyncpg.*"]
+module = ["asyncpg.*", "msal.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
@@ -85,6 +89,9 @@ filterwarnings = [
 [tool.coverage.run]
 source = ["app"]
 omit = ["app/__main__.py"]
+# SQLAlchemy's async bridge runs ORM work inside greenlets; without this,
+# code executing downstream of greenlet_spawn is invisible to coverage.
+concurrency = ["greenlet", "thread"]
 
 [tool.coverage.report]
 show_missing = true

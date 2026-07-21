@@ -4,19 +4,72 @@ Production backend foundation for Astra Business Services' licensing-mailbox
 automation: PostgreSQL data model, FastAPI read API, atomic email
 state-machine, and tooling to import the PowerShell prototype's data.
 
-## Current milestone boundary (Milestone 1)
+## Current milestone boundary (Milestone 2)
 
-**In scope:** PostgreSQL schema + Alembic migrations, async SQLAlchemy ORM,
-read-only operational API, email processing state machine with audit +
-transactional outbox, prototype JSON importer, dev seed data, structured
-redacted logging, correlation IDs, Docker dev environment, tests, CI.
+**Milestone 1** delivered the PostgreSQL schema, read API, state machine with
+audit + transactional outbox, prototype importer, and CI.
 
-**Explicitly out of scope (later milestones):** live Microsoft Graph calls,
-webhooks, delta sync execution, Outlook draft creation/sending, message
-moves, SharePoint, Service Bus publishing, Key Vault, LLM classification,
-NMLS automation, the review portal frontend, and production Entra JWT auth.
-Nothing in this codebase talks to Microsoft 365, OpenAI, or any external
-service.
+**Milestone 2** adds the production Microsoft Graph ingestion boundary:
+app-only MSAL authentication, a resilient async Graph client, Outlook message
+subscriptions (create/renew/reconcile), webhook + lifecycle receivers with
+clientState validation, durable notification receipts, a PostgreSQL-backed
+job queue with leases and coalescing, Inbox delta synchronization, email
+evidence capture (full JSON + raw MIME + attachments with SHA-256), workers,
+a scheduler, Prometheus metrics, and operational CLI/API. Processing stops at
+`ATTACHMENTS_SAVED`.
+
+**Explicitly out of scope (later milestones):** classification, task
+creation, Outlook drafts, sending mail, moving messages, SharePoint storage,
+Service Bus publishing, Key Vault, NMLS automation, the review portal
+frontend, and production Entra JWT auth. The automated test suite makes **no
+live Microsoft calls** — every Graph interaction is respx-mocked, and CI
+blackholes the Graph hostnames.
+
+### Graph documentation
+
+[graph-integration](docs/graph-integration.md) ·
+[webhook-security](docs/webhook-security.md) ·
+[delta-synchronization](docs/delta-synchronization.md) ·
+[operations runbook](docs/graph-operations-runbook.md) ·
+[staging acceptance](docs/staging-acceptance.md)
+
+### Running the workers
+
+```powershell
+python -m app.workers.runner --queues subscriptions,sync,ingestion
+python -m app.workers.scheduling          # single-replica periodic scheduler
+```
+
+### Webhook paths
+
+- `POST /webhooks/microsoft-graph/messages`
+- `POST /webhooks/microsoft-graph/lifecycle`
+
+Local validation check (no Graph needed):
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8000/webhooks/microsoft-graph/messages?validationToken=milestone2-test"
+# -> 200, text/plain, body: milestone2-test
+```
+
+Local mock-notification workflow: seed a synthetic subscription and post a
+synthetic notification exactly as the test suite does — see
+`tests/api/webhooks/test_webhook_api.py` and
+`tests/fixtures/graph_payloads.py` (no real identifiers required). Live
+subscription validation requires a publicly reachable HTTPS `PUBLIC_BASE_URL`
+(see the staging runbook; no specific tunnel vendor is mandated).
+
+### Graph security warnings
+
+- `GRAPH_CLIENT_SECRET` and access tokens never appear in logs, the DB, or
+  CLI output; delta links are stored opaquely and only fingerprints are
+  logged.
+- Webhook notifications are authenticated via hashed clientState with
+  constant-time comparison; payloads are treated as signals, never as mail
+  content.
+- Mutating Graph endpoints are disabled when `APP_ENV=production` until the
+  Entra actor layer lands; the filesystem evidence store is likewise rejected
+  in production.
 
 The proven PowerShell prototype is retained under
 `scripts/powershell-acceptance-tests/` as acceptance/recovery tooling; its

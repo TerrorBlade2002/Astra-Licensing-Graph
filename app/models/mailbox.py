@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import ForeignKey, Index, UniqueConstraint, text
+from sqlalchemy import ForeignKey, Index, Integer, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -73,3 +73,9 @@ class MailboxSyncState(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     last_error_message: Mapped[str | None]
     lease_owner: Mapped[str | None]
     lease_expires_at: Mapped[datetime | None]
+    needs_rebaseline: Mapped[bool] = mapped_column(nullable=False, server_default=text("false"))
+    last_delta_url_fingerprint: Mapped[str | None]
+    last_page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_change_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_successful_job_id: Mapped[uuid.UUID | None]
+    last_failed_job_id: Mapped[uuid.UUID | None]

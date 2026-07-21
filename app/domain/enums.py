@@ -89,3 +89,36 @@ class ActorType(StrEnum):
     HUMAN = "HUMAN"
     SYSTEM = "SYSTEM"
     IMPORT = "IMPORT"
+
+
+class GraphSubscriptionStatus(StrEnum):
+    CREATING = "CREATING"
+    ACTIVE = "ACTIVE"
+    RENEWAL_REQUIRED = "RENEWAL_REQUIRED"
+    REAUTHORIZATION_REQUIRED = "REAUTHORIZATION_REQUIRED"
+    REMOVED = "REMOVED"
+    EXPIRED = "EXPIRED"
+    ERROR = "ERROR"
+
+
+# Statuses that occupy the single active-subscription slot per folder.
+ACTIVE_SUBSCRIPTION_STATUSES = (
+    GraphSubscriptionStatus.CREATING,
+    GraphSubscriptionStatus.ACTIVE,
+    GraphSubscriptionStatus.RENEWAL_REQUIRED,
+    GraphSubscriptionStatus.REAUTHORIZATION_REQUIRED,
+)
+
+
+class NotificationReceiptStatus(StrEnum):
+    ACCEPTED = "ACCEPTED"
+    DUPLICATE = "DUPLICATE"
+    INVALID_CLIENT_STATE = "INVALID_CLIENT_STATE"
+    UNKNOWN_SUBSCRIPTION = "UNKNOWN_SUBSCRIPTION"
+    MALFORMED = "MALFORMED"
+
+
+class FolderMembership(StrEnum):
+    PRESENT = "PRESENT"
+    REMOVED = "REMOVED"
+    UNKNOWN = "UNKNOWN"

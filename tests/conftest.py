@@ -129,6 +129,107 @@ async def client(app: FastAPI) -> AsyncIterator[AsyncClient]:
             yield c
 
 
+# -------------------------------------------------------------- graph helpers
+
+
+class FakeTokenProvider:
+    """Deterministic token provider for mocked Graph tests."""
+
+    def __init__(self, token: str = "synthetic-test-token") -> None:
+        self.token = token
+        self.calls = 0
+        self.force_refreshes = 0
+
+    async def get_access_token(self, force_refresh: bool = False) -> str:
+        self.calls += 1
+        if force_refresh:
+            self.force_refreshes += 1
+        return self.token
+
+
+@pytest.fixture
+def graph_settings(test_database_url: str, tmp_path: Path) -> Settings:
+    return make_test_settings(
+        test_database_url,
+        GRAPH_ENABLED=True,
+        GRAPH_TENANT_ID="00000000-0000-0000-0000-00000000t3st",
+        GRAPH_CLIENT_ID="synthetic-client-id",
+        GRAPH_CLIENT_SECRET="synthetic-client-secret",
+        FILESYSTEM_EVIDENCE_ROOT=str(tmp_path / "evidence"),
+        GRAPH_MAX_RETRY_ATTEMPTS=3,
+        GRAPH_MAX_RETRY_DELAY_SECONDS=0.05,
+        GRAPH_JOB_RETRY_BASE_SECONDS=0.01,
+        GRAPH_JOB_RETRY_MAX_SECONDS=0.05,
+        GRAPH_WORKER_POLL_INTERVAL_SECONDS=0.01,
+    )
+
+
+@pytest.fixture
+def fake_token_provider() -> FakeTokenProvider:
+    return FakeTokenProvider()
+
+
+@pytest.fixture
+async def graph_client(graph_settings: Settings, fake_token_provider: FakeTokenProvider):
+    from app.graph.client import GraphHttpClient
+
+    client = GraphHttpClient(graph_settings, fake_token_provider)
+    yield client
+    await client.aclose()
+
+
+@pytest.fixture
+def evidence_store(graph_settings: Settings):
+    from app.evidence.filesystem import FilesystemEvidenceStore
+
+    return FilesystemEvidenceStore(graph_settings.filesystem_evidence_root)
+
+
+async def create_inbox_folder(session: AsyncSession, mailbox: Mailbox):
+    from app.models import MailboxFolder
+
+    folder = MailboxFolder(
+        id=uuid.uuid4(),
+        mailbox_id=mailbox.id,
+        graph_folder_id="SYNTH-FOLDER-INBOX",
+        display_name="Inbox",
+        folder_path="Inbox",
+    )
+    session.add(folder)
+    await session.flush()
+    return folder
+
+
+async def create_subscription_row(
+    session: AsyncSession,
+    mailbox: Mailbox,
+    folder: Any,
+    *,
+    client_state: str = "synthetic-client-state",
+    graph_subscription_id: str | None = "synth-sub-001",
+    status: str = "ACTIVE",
+):
+    from app.models import GraphSubscription
+    from app.webhooks.security import hash_client_state
+
+    row = GraphSubscription(
+        id=uuid.uuid4(),
+        mailbox_id=mailbox.id,
+        folder_id=folder.id,
+        graph_subscription_id=graph_subscription_id,
+        resource=f"users/synth-user/mailFolders/{folder.graph_folder_id}/messages",
+        change_types="created,updated,deleted",
+        notification_url="http://127.0.0.1:8000/webhooks/microsoft-graph/messages",
+        lifecycle_notification_url="http://127.0.0.1:8000/webhooks/microsoft-graph/lifecycle",
+        client_state_hash=hash_client_state(client_state),
+        status=status,
+        expiration_at=datetime(2026, 7, 27, tzinfo=UTC),
+    )
+    session.add(row)
+    await session.flush()
+    return row
+
+
 # ------------------------------------------------------------------ factories
 
 

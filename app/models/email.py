@@ -18,7 +18,12 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
-from app.domain.enums import AttachmentStatus, ProcessingState, RecipientType
+from app.domain.enums import (
+    AttachmentStatus,
+    FolderMembership,
+    ProcessingState,
+    RecipientType,
+)
 from app.models.mixins import (
     CreatedAtMixin,
     TimestampMixin,
@@ -53,6 +58,7 @@ class Email(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         ),
         enum_check("processing_state", ProcessingState, "processing_state"),
         enum_check("resume_state", ProcessingState, "resume_state"),
+        enum_check("synced_folder_membership", FolderMembership, "synced_folder_membership"),
     )
 
     mailbox_id: Mapped[uuid.UUID] = mapped_column(
@@ -81,6 +87,18 @@ class Email(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     last_error_message: Mapped[str | None]
     raw_message_storage_uri: Mapped[str | None]
     raw_message_sha256: Mapped[str | None]
+    last_graph_modified_at: Mapped[datetime | None]
+    graph_etag: Mapped[str | None]
+    synced_folder_membership: Mapped[str] = mapped_column(
+        nullable=False, server_default=text("'PRESENT'")
+    )
+    removed_from_synced_folder_at: Mapped[datetime | None]
+    full_message_json_storage_uri: Mapped[str | None]
+    full_message_json_sha256: Mapped[str | None]
+    raw_mime_storage_uri: Mapped[str | None]
+    raw_mime_sha256: Mapped[str | None]
+    ingestion_job_id: Mapped[uuid.UUID | None]
+    evidence_saved_at: Mapped[datetime | None]
     source_payload: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     discovered_at: Mapped[datetime | None]
     fetched_at: Mapped[datetime | None]

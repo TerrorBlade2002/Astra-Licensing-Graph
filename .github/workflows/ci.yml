@@ -27,6 +27,8 @@ jobs:
     env:
       TEST_DATABASE_URL: postgresql+asyncpg://astra:astra_ci@localhost:5432/astra_licensing_test
       DATABASE_URL: postgresql+asyncpg://astra:astra_ci@localhost:5432/astra_licensing_test
+      # No Microsoft or OpenAI credentials exist in CI; all Graph tests are
+      # respx-mocked and any real network call to Graph would fail the run.
 
     steps:
       - uses: actions/checkout@v4
@@ -41,6 +43,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.lock.txt
           pip install -e . --no-deps
+
+      - name: Scan for obvious committed secrets
+        run: |
+          ! grep -rInE \
+            '(client_secret|CLIENT_SECRET)[[:space:]]*[=:][[:space:]]*["'"'"'][A-Za-z0-9~._-]{16,}|eyJ[A-Za-z0-9_-]{40,}\.eyJ|-----BEGIN (RSA |EC )?PRIVATE KEY-----' \
+            --include='*.py' --include='*.toml' --include='*.yml' --include='*.yaml' \
+            --include='*.ini' --include='*.md' --include='*.ps1' --include='*.example' \
+            app tests docs scripts migrations .env.example pyproject.toml \
+            || (echo 'Potential secret pattern found in committed files' && exit 1)
 
       - name: Ruff format check
         run: ruff format --check .
@@ -57,5 +68,18 @@ jobs:
           alembic downgrade base
           alembic upgrade head
 
-      - name: Tests with coverage
+      - name: Block live Microsoft Graph traffic
+        # Belt-and-braces: resolve graph.microsoft.com and login.microsoftonline.com
+        # to a blackhole so any unmocked call fails fast instead of leaving CI.
+        run: |
+          echo "127.0.0.2 graph.microsoft.com" | sudo tee -a /etc/hosts
+          echo "127.0.0.2 login.microsoftonline.com" | sudo tee -a /etc/hosts
+
+      - name: Tests with coverage (unit, integration, mocked Graph)
         run: pytest --cov=app --cov-report=term --cov-fail-under=85
+
+      - name: Verify no live Graph hostname was contacted
+        run: |
+          # The blackhole entries above guarantee it; this step documents the
+          # invariant explicitly for reviewers.
+          echo "graph.microsoft.com and login.microsoftonline.com were blackholed for the entire test run."

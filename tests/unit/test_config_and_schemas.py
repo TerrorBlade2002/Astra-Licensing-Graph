@@ -49,9 +49,36 @@ def test_production_rejects_wildcard_cors() -> None:
         _settings(APP_ENV="production", AUTH_MODE="entra", CORS_ORIGINS="*")
 
 
-def test_valid_production_settings_pass() -> None:
-    settings = _settings(APP_ENV="production", AUTH_MODE="entra")
-    assert settings.app_env == "production"
+def test_production_rejects_filesystem_evidence_backend() -> None:
+    # Milestone 2 ships only the filesystem evidence backend, so a production
+    # configuration is intentionally impossible until SharePoint storage lands.
+    with pytest.raises(ValidationError, match="EVIDENCE_STORAGE_BACKEND"):
+        _settings(
+            APP_ENV="production",
+            AUTH_MODE="entra",
+            PUBLIC_BASE_URL="https://api.example.invalid",
+        )
+
+
+def test_staging_rejects_localhost_public_base_url() -> None:
+    with pytest.raises(ValidationError, match="PUBLIC_BASE_URL"):
+        _settings(APP_ENV="staging", PUBLIC_BASE_URL="http://127.0.0.1:8000")
+
+
+def test_staging_accepts_https_public_base_url() -> None:
+    settings = _settings(APP_ENV="staging", PUBLIC_BASE_URL="https://api.example.invalid")
+    assert settings.notification_url.endswith("/webhooks/microsoft-graph/messages")
+    assert settings.lifecycle_url.endswith("/webhooks/microsoft-graph/lifecycle")
+
+
+def test_graph_enabled_requires_credentials() -> None:
+    with pytest.raises(ValidationError, match="GRAPH_ENABLED"):
+        _settings(GRAPH_ENABLED=True)
+
+
+def test_graph_base_url_must_be_https() -> None:
+    with pytest.raises(ValidationError, match="HTTPS"):
+        _settings(GRAPH_BASE_URL="http://graph.microsoft.com/v1.0")
 
 
 def test_invalid_app_env_is_rejected() -> None:
