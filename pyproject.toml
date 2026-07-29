@@ -23,6 +23,19 @@ dependencies = [
     "prometheus-client>=0.21,<1",
     "python-multipart>=0.0.20,<1",
     "jinja2>=3.1,<4",
+    # Milestone 6 document generation. Chosen for permissive licensing, active
+    # maintenance, and pure-Python installs (no system libraries in CI):
+    #   pypdf       - AcroForm inspection and field filling; no rendering engine,
+    #                 so a template's own appearance is preserved.
+    #   reportlab   - cover sheets and flat-PDF field worksheets.
+    #   python-docx - DOCX placeholder substitution without executing macros.
+    #   openpyxl    - safe XLSX reading with formulas treated as data.
+    "pypdf>=5,<7",
+    "reportlab>=4.2,<5",
+    "python-docx>=1.1,<2",
+    "openpyxl>=3.1,<4",
+    # Envelope encryption for sensitive registry values (AES-256-GCM).
+    "cryptography>=43,<50",
 ]
 
 [project.optional-dependencies]

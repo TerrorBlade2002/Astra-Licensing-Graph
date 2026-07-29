@@ -252,6 +252,105 @@ COMMUNICATION_OLDEST_PENDING_APPROVAL_AGE_SECONDS = Gauge(
 )
 
 
+# ---------------------------------------------------------------------------
+# Milestone 6: licensing lifecycle, requirements, deadlines, packets, forms.
+#
+# Legal entity names, license numbers, user names, document filenames, regulator
+# names, and case identifiers are never used as labels. Where a dimension is
+# genuinely useful it is a low-cardinality closed enum (obligation type, stage,
+# outcome) whose value set is fixed by code, not by data.
+# ---------------------------------------------------------------------------
+LICENSING_INVENTORY_TOTAL = Gauge(
+    "licensing_inventory_total", "License inventory records", registry=REGISTRY
+)
+LICENSING_ACTIVE_LICENSES = Gauge(
+    "licensing_active_licenses", "Licenses in an active status", registry=REGISTRY
+)
+LICENSING_EXPIRING_LICENSES = Gauge(
+    "licensing_expiring_licenses",
+    "Licenses expiring inside the alert horizon",
+    ["window_days"],
+    registry=REGISTRY,
+)
+LICENSING_OVERDUE_OBLIGATIONS = Gauge(
+    "licensing_overdue_obligations", "Obligations past their due date", registry=REGISTRY
+)
+
+REQUIREMENT_ASSESSMENTS_TOTAL = Counter(
+    "requirement_assessments_total", "Requirement assessments created", registry=REGISTRY
+)
+REQUIREMENT_RESULTS_COUNSEL_REVIEW = Gauge(
+    "requirement_results_counsel_review",
+    "Requirement results awaiting counsel review",
+    registry=REGISTRY,
+)
+REQUIREMENT_SOURCES_STALE = Gauge(
+    "requirement_sources_stale", "Sources past their verification window", registry=REGISTRY
+)
+REQUIREMENT_SOURCE_CHANGES_PENDING = Gauge(
+    "requirement_source_changes_pending",
+    "Source snapshots awaiting change review",
+    registry=REGISTRY,
+)
+
+COMPLIANCE_CASES_OPEN = Gauge(
+    "compliance_cases_open", "Compliance cases not yet completed", registry=REGISTRY
+)
+COMPLIANCE_CASES_BLOCKED = Gauge(
+    "compliance_cases_blocked", "Compliance cases blocked", registry=REGISTRY
+)
+COMPLIANCE_CASES_OVERDUE = Gauge(
+    "compliance_cases_overdue", "Compliance cases past due", registry=REGISTRY
+)
+COMPLIANCE_CASE_STAGE_DURATION_SECONDS = Histogram(
+    "compliance_case_stage_duration_seconds",
+    "Time a case spent in a stage before transitioning",
+    ["stage"],
+    buckets=(3600, 21600, 86400, 259200, 604800, 1209600, 2592000, 7776000),
+    registry=REGISTRY,
+)
+
+DEADLINES_DUE_TOTAL = Gauge(
+    "deadlines_due_total", "Open deadlines by type", ["deadline_type"], registry=REGISTRY
+)
+DEADLINES_OVERDUE_TOTAL = Gauge(
+    "deadlines_overdue_total", "Overdue deadlines by type", ["deadline_type"], registry=REGISTRY
+)
+
+INFORMATION_REQUESTS_OPEN = Gauge(
+    "information_requests_open", "Outstanding internal information requests", registry=REGISTRY
+)
+INFORMATION_VALUES_STALE = Gauge(
+    "information_values_stale", "Approved values past their freshness window", registry=REGISTRY
+)
+
+PACKET_BUILDS_TOTAL = Counter(
+    "packet_builds_total", "Document packet build attempts", registry=REGISTRY
+)
+PACKET_MISSING_ITEMS_TOTAL = Counter(
+    "packet_missing_items_total", "Packet items that could not be matched", registry=REGISTRY
+)
+
+FORM_INSTANCES_TOTAL = Counter("form_instances_total", "Form instances created", registry=REGISTRY)
+FORM_FIELDS_MISSING_TOTAL = Counter(
+    "form_fields_missing_total", "Form fields lacking approved information", registry=REGISTRY
+)
+FORMS_WAITING_SIGNATURE = Gauge(
+    "forms_waiting_signature", "Form instances awaiting a human signature", registry=REGISTRY
+)
+
+TRACKER_IMPORT_ROWS_TOTAL = Counter(
+    "tracker_import_rows_total", "Tracker rows processed", ["action"], registry=REGISTRY
+)
+TRACKER_IMPORT_ERRORS_TOTAL = Counter(
+    "tracker_import_errors_total", "Tracker rows that failed", registry=REGISTRY
+)
+
+LICENSING_JOBS_TOTAL = Counter(
+    "licensing_jobs_total", "Licensing jobs processed", ["job_type", "outcome"], registry=REGISTRY
+)
+
+
 def render_metrics() -> bytes:
     return generate_latest(REGISTRY)
 

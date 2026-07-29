@@ -15,6 +15,7 @@ GraphCredentialMode = Literal["client_secret", "certificate"]
 EvidenceBackend = Literal["filesystem", "sharepoint"]
 SharePointPermissionMode = Literal["sites_selected", "tenant_wide"]
 UploadConflictBehavior = Literal["fail", "rename", "replace-current-version"]
+PacketArchiveFormat = Literal["ZIP", "NONE"]
 
 
 class Settings(BaseSettings):
@@ -440,12 +441,133 @@ class Settings(BaseSettings):
         default=24, alias="SHAREPOINT_MISSING_ITEM_GRACE_HOURS"
     )
 
+    # ------------------------------------------------------------------
+    # Milestone 6: licensing lifecycle, requirement matrix, deadlines,
+    # reusable information, packets, forms, and controlled imports.
+    # ------------------------------------------------------------------
+    licensing_enabled: bool = Field(default=True, alias="LICENSING_ENABLED")
+    licensing_default_lead_days: int = Field(default=30, alias="LICENSING_DEFAULT_LEAD_DAYS")
+    licensing_planning_horizon_days: int = Field(
+        default=540, alias="LICENSING_PLANNING_HORIZON_DAYS"
+    )
+    licensing_requirement_matrix_enabled: bool = Field(
+        default=True, alias="LICENSING_REQUIREMENT_MATRIX_ENABLED"
+    )
+    #: Human review of every advisory requirement result. Never disable in
+    #: production: the matrix is advisory and must not stand as a legal answer.
+    licensing_require_human_review: bool = Field(
+        default=True, alias="LICENSING_REQUIRE_HUMAN_REVIEW"
+    )
+    licensing_require_counsel_for_not_required: bool = Field(
+        default=True, alias="LICENSING_REQUIRE_COUNSEL_FOR_NOT_REQUIRED"
+    )
+    licensing_default_timezone: str = Field(
+        default="America/New_York", alias="LICENSING_DEFAULT_TIMEZONE"
+    )
+    #: Global cross-entity reuse switch. Must stay false; reuse is granted
+    #: per value through an explicit approval record instead.
+    licensing_cross_entity_reuse_enabled: bool = Field(
+        default=False, alias="LICENSING_CROSS_ENTITY_REUSE_ENABLED"
+    )
+    #: Guards against the matrix ever being presented as legal advice.
+    licensing_matrix_advisory_only: bool = Field(
+        default=True, alias="LICENSING_MATRIX_ADVISORY_ONLY"
+    )
+    licensing_job_lease_seconds: int = Field(default=300, alias="LICENSING_JOB_LEASE_SECONDS")
+    licensing_worker_poll_interval_seconds: float = Field(
+        default=5.0, alias="LICENSING_WORKER_POLL_INTERVAL_SECONDS"
+    )
+
+    requirement_source_fetch_enabled: bool = Field(
+        default=False, alias="REQUIREMENT_SOURCE_FETCH_ENABLED"
+    )
+    requirement_source_max_bytes: int = Field(
+        default=25 * 1024 * 1024, alias="REQUIREMENT_SOURCE_MAX_BYTES"
+    )
+    #: Explicit allow-list of public regulator hosts. Authenticated portals
+    #: (NMLS sign-in, state licensee portals) must never appear here.
+    requirement_source_allowed_hosts: list[str] = Field(
+        default_factory=list, alias="REQUIREMENT_SOURCE_ALLOWED_HOSTS"
+    )
+    requirement_source_freshness_days: int = Field(
+        default=365, alias="REQUIREMENT_SOURCE_FRESHNESS_DAYS"
+    )
+    requirement_source_change_review_required: bool = Field(
+        default=True, alias="REQUIREMENT_SOURCE_CHANGE_REVIEW_REQUIRED"
+    )
+    requirement_source_fetch_timeout_seconds: float = Field(
+        default=30.0, alias="REQUIREMENT_SOURCE_FETCH_TIMEOUT_SECONDS"
+    )
+
+    deadline_materialization_interval_seconds: int = Field(
+        default=3600, alias="DEADLINE_MATERIALIZATION_INTERVAL_SECONDS"
+    )
+    deadline_alert_windows_days: list[int] = Field(
+        default_factory=lambda: [120, 90, 60, 30, 14, 7, 3, 0],
+        alias="DEADLINE_ALERT_WINDOWS_DAYS",
+    )
+    deadline_overdue_escalation_enabled: bool = Field(
+        default=True, alias="DEADLINE_OVERDUE_ESCALATION_ENABLED"
+    )
+
+    information_registry_enabled: bool = Field(default=True, alias="INFORMATION_REGISTRY_ENABLED")
+    #: Operational pointer to the vault/KMS entry holding the keys. The key
+    #: material itself is read from INFORMATION_ENCRYPTION_KEYS at use time and
+    #: never stored in settings.
+    information_encryption_key_reference: str | None = Field(
+        default=None, alias="INFORMATION_ENCRYPTION_KEY_REFERENCE"
+    )
+    information_default_freshness_days: int = Field(
+        default=365, alias="INFORMATION_DEFAULT_FRESHNESS_DAYS"
+    )
+    information_highly_restricted_enabled: bool = Field(
+        default=False, alias="INFORMATION_HIGHLY_RESTRICTED_ENABLED"
+    )
+
+    packet_generation_enabled: bool = Field(default=True, alias="PACKET_GENERATION_ENABLED")
+    packet_max_documents: int = Field(default=100, alias="PACKET_MAX_DOCUMENTS")
+    packet_max_total_bytes: int = Field(default=250 * 1024 * 1024, alias="PACKET_MAX_TOTAL_BYTES")
+    packet_include_cover_sheet: bool = Field(default=True, alias="PACKET_INCLUDE_COVER_SHEET")
+    packet_archive_format: PacketArchiveFormat = Field(default="ZIP", alias="PACKET_ARCHIVE_FORMAT")
+
+    form_preparation_enabled: bool = Field(default=True, alias="FORM_PREPARATION_ENABLED")
+    form_max_template_bytes: int = Field(default=50 * 1024 * 1024, alias="FORM_MAX_TEMPLATE_BYTES")
+    form_pdf_filling_enabled: bool = Field(default=True, alias="FORM_PDF_FILLING_ENABLED")
+    form_docx_filling_enabled: bool = Field(default=True, alias="FORM_DOCX_FILLING_ENABLED")
+    form_flat_pdf_worksheet_enabled: bool = Field(
+        default=True, alias="FORM_FLAT_PDF_WORKSHEET_ENABLED"
+    )
+    #: Hard boundaries for Milestone 6. Production startup fails if either is on.
+    form_signature_automation_enabled: bool = Field(
+        default=False, alias="FORM_SIGNATURE_AUTOMATION_ENABLED"
+    )
+    form_external_submission_enabled: bool = Field(
+        default=False, alias="FORM_EXTERNAL_SUBMISSION_ENABLED"
+    )
+    #: Flattening a filled PDF is only allowed as an explicit post-approval step.
+    form_flatten_after_approval_enabled: bool = Field(
+        default=False, alias="FORM_FLATTEN_AFTER_APPROVAL_ENABLED"
+    )
+    form_download_ttl_seconds: int = Field(default=300, alias="FORM_DOWNLOAD_TTL_SECONDS")
+
+    tracker_import_enabled: bool = Field(default=True, alias="TRACKER_IMPORT_ENABLED")
+    tracker_import_max_bytes: int = Field(
+        default=25 * 1024 * 1024, alias="TRACKER_IMPORT_MAX_BYTES"
+    )
+    tracker_import_allowed_extensions: list[str] = Field(
+        default_factory=lambda: [".xlsx", ".csv"], alias="TRACKER_IMPORT_ALLOWED_EXTENSIONS"
+    )
+    tracker_import_max_rows: int = Field(default=20000, alias="TRACKER_IMPORT_MAX_ROWS")
+
     @field_validator(
         "cors_origins",
         "allowed_attachment_mime_types",
         "document_allowed_mime_types",
         "document_allowed_extensions",
         "document_expiry_alert_days",
+        "requirement_source_allowed_hosts",
+        "deadline_alert_windows_days",
+        "tracker_import_allowed_extensions",
         mode="before",
     )
     @classmethod
@@ -616,9 +738,105 @@ class Settings(BaseSettings):
                 problems.append("AI classification requires OPENAI_API_KEY and OPENAI_MODEL")
             if self.openai_store_responses:
                 problems.append("OPENAI_STORE_RESPONSES must remain false for Milestone 4")
+        problems.extend(self._licensing_problems())
         if problems:
             raise ValueError("; ".join(problems))
         return self
+
+    def _licensing_problems(self) -> list[str]:
+        """Milestone 6 safety rails.
+
+        Two classes of rule live here. The first applies everywhere, because a
+        setting like "signature automation" has no legitimate value in any
+        environment during Milestone 6. The second applies only to production,
+        where a development-grade shortcut becomes a compliance failure.
+        """
+        problems: list[str] = []
+
+        # Absolute Milestone 6 boundaries, enforced in every environment.
+        if self.form_signature_automation_enabled:
+            problems.append(
+                "FORM_SIGNATURE_AUTOMATION_ENABLED must remain false: Milestone 6 records "
+                "that a signature is required and never applies one"
+            )
+        if self.form_external_submission_enabled:
+            problems.append(
+                "FORM_EXTERNAL_SUBMISSION_ENABLED must remain false: Milestone 6 prepares "
+                "filings but never submits them"
+            )
+        if not self.licensing_matrix_advisory_only:
+            problems.append(
+                "LICENSING_MATRIX_ADVISORY_ONLY must remain true: requirement results are "
+                "advisory and must not be presented as legal advice"
+            )
+
+        # Internal consistency, independent of environment.
+        if self.licensing_default_lead_days < 0:
+            problems.append("LICENSING_DEFAULT_LEAD_DAYS cannot be negative")
+        if self.licensing_planning_horizon_days <= 0:
+            problems.append("LICENSING_PLANNING_HORIZON_DAYS must be positive")
+        if self.licensing_planning_horizon_days < self.licensing_default_lead_days:
+            problems.append(
+                "LICENSING_PLANNING_HORIZON_DAYS must cover LICENSING_DEFAULT_LEAD_DAYS"
+            )
+        if any(window < 0 for window in self.deadline_alert_windows_days):
+            problems.append("DEADLINE_ALERT_WINDOWS_DAYS must not contain negative values")
+        if self.packet_max_documents <= 0 or self.packet_max_total_bytes <= 0:
+            problems.append("packet size limits must be positive")
+        if self.form_max_template_bytes <= 0:
+            problems.append("FORM_MAX_TEMPLATE_BYTES must be positive")
+        if self.tracker_import_max_bytes <= 0 or self.tracker_import_max_rows <= 0:
+            problems.append("tracker import limits must be positive")
+        if any(
+            not extension.startswith(".") for extension in self.tracker_import_allowed_extensions
+        ):
+            problems.append("TRACKER_IMPORT_ALLOWED_EXTENSIONS entries must start with '.'")
+        # Macro-enabled and legacy binary workbooks are never parsed.
+        rejected = {".xlsm", ".xltm", ".xlsb", ".xls"}
+        if rejected & {ext.lower() for ext in self.tracker_import_allowed_extensions}:
+            problems.append(
+                "macro-enabled or legacy binary spreadsheet extensions cannot be imported"
+            )
+        if self.requirement_source_fetch_enabled and not self.requirement_source_allowed_hosts:
+            problems.append(
+                "REQUIREMENT_SOURCE_FETCH_ENABLED requires an explicit "
+                "REQUIREMENT_SOURCE_ALLOWED_HOSTS allow-list"
+            )
+        if self.form_flatten_after_approval_enabled and not self.form_pdf_filling_enabled:
+            problems.append("PDF flattening requires FORM_PDF_FILLING_ENABLED")
+
+        if self.app_env != "production":
+            return problems
+
+        # Production-only requirements.
+        if not self.licensing_require_human_review:
+            problems.append(
+                "production requires LICENSING_REQUIRE_HUMAN_REVIEW: an unreviewed "
+                "requirement result must never stand as a determination"
+            )
+        if not self.requirement_source_change_review_required:
+            problems.append(
+                "production requires REQUIREMENT_SOURCE_CHANGE_REVIEW_REQUIRED so a changed "
+                "source cannot silently alter active rules"
+            )
+        if self.information_registry_enabled and not self.information_encryption_key_reference:
+            problems.append(
+                "production requires INFORMATION_ENCRYPTION_KEY_REFERENCE for sensitive "
+                "reusable information"
+            )
+        if self.licensing_cross_entity_reuse_enabled:
+            problems.append(
+                "LICENSING_CROSS_ENTITY_REUSE_ENABLED must remain false in production; "
+                "cross-entity reuse is granted per value with manager approval"
+            )
+        if self.licensing_enabled and self.auth_mode == "development":
+            problems.append("production licensing cannot use development authentication")
+        if self.tracker_import_enabled and self.evidence_storage_backend == "filesystem":
+            problems.append(
+                "production tracker imports require governed evidence storage for the "
+                "original source file"
+            )
+        return problems
 
     @property
     def graph_allowed_host(self) -> str:

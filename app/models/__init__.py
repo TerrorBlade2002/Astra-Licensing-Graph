@@ -13,6 +13,7 @@ from app.models.communication import (
     SendApproval,
     WorkflowCompletionRecord,
 )
+from app.models.deadlines import ComplianceDeadline, DeadlineEvent, DeadlineRule
 from app.models.document import (
     Document,
     DocumentJob,
@@ -23,9 +24,38 @@ from app.models.document import (
 from app.models.draft import OutboundDraft, OutboundDraftAttachment, OutboundDraftVersion
 from app.models.email import Email, EmailAttachment, EmailRecipient
 from app.models.event import AuditEvent, EmailProcessingEvent
+from app.models.forms import (
+    FormFieldMapping,
+    FormFieldValue,
+    FormInstance,
+    FormTemplate,
+    FormTemplateField,
+)
 from app.models.graph_subscription import GraphSubscription
 from app.models.heartbeat import WorkerHeartbeat
+from app.models.information import (
+    InformationDefinition,
+    InformationOwnerAssignment,
+    InformationValue,
+    InformationValueUsage,
+)
 from app.models.job import GraphJob
+from app.models.licensing import (
+    BusinessActivity,
+    CaseInformationRequest,
+    ComplianceCase,
+    ComplianceCaseStageEvent,
+    ComplianceObligation,
+    Jurisdiction,
+    LegalEntity,
+    LicenseBond,
+    LicenseInventory,
+    LicenseStatusEvent,
+    LicenseType,
+    LicensingJob,
+    LicensingNotification,
+    OperatingProfile,
+)
 from app.models.mailbox import Mailbox, MailboxFolder, MailboxSyncState
 from app.models.milestone4 import (
     ClassificationFieldCorrection,
@@ -42,6 +72,22 @@ from app.models.milestone4 import (
 )
 from app.models.notification import GraphNotificationReceipt
 from app.models.outbox import OutboxEvent
+from app.models.packets import (
+    DocumentPacket,
+    DocumentPacketItem,
+    PacketTemplate,
+    PacketTemplateItem,
+)
+from app.models.requirements import (
+    AssessmentOverride,
+    RequirementAssessment,
+    RequirementAssessmentResult,
+    RequirementRule,
+    RequirementRuleSet,
+    RequirementRuleSource,
+    RequirementSource,
+    RequirementSourceSnapshot,
+)
 from app.models.review import ClassificationReview
 from app.models.sharepoint import (
     SharePointDrive,
@@ -51,10 +97,14 @@ from app.models.sharepoint import (
     SharePointUploadSession,
 )
 from app.models.task import LicensingTask, TaskComment, TaskEvent, TaskRequestedItem
+from app.models.tracker import TrackerImportRow, TrackerImportRun
 
 __all__ = [
+    "AssessmentOverride",
     "AuditEvent",
     "Base",
+    "BusinessActivity",
+    "CaseInformationRequest",
     "Classification",
     "ClassificationFieldCorrection",
     "ClassificationReview",
@@ -62,23 +112,49 @@ __all__ = [
     "ClassificationRuleSet",
     "ClassificationRun",
     "CommunicationJob",
+    "ComplianceCase",
+    "ComplianceCaseStageEvent",
+    "ComplianceDeadline",
+    "ComplianceObligation",
+    "DeadlineEvent",
+    "DeadlineRule",
     "Document",
     "DocumentJob",
     "DocumentLink",
     "DocumentMetadataEvent",
+    "DocumentPacket",
+    "DocumentPacketItem",
     "DocumentVersion",
     "Email",
     "EmailAttachment",
     "EmailProcessingEvent",
     "EmailRecipient",
+    "FormFieldMapping",
+    "FormFieldValue",
+    "FormInstance",
+    "FormTemplate",
+    "FormTemplateField",
     "GraphJob",
     "GraphNotificationReceipt",
     "GraphSubscription",
+    "InformationDefinition",
+    "InformationOwnerAssignment",
+    "InformationValue",
+    "InformationValueUsage",
+    "Jurisdiction",
+    "LegalEntity",
+    "LicenseBond",
+    "LicenseInventory",
+    "LicenseStatusEvent",
+    "LicenseType",
+    "LicensingJob",
+    "LicensingNotification",
     "LicensingTask",
     "Mailbox",
     "MailboxFolder",
     "MailboxSyncState",
     "MessageMoveAttempt",
+    "OperatingProfile",
     "Organization",
     "OrganizationAddress",
     "OrganizationDomain",
@@ -87,8 +163,17 @@ __all__ = [
     "OutboundDraftVersion",
     "OutboundSendAttempt",
     "OutboxEvent",
+    "PacketTemplate",
+    "PacketTemplateItem",
     "PromptVersion",
     "RecipientPolicyRule",
+    "RequirementAssessment",
+    "RequirementAssessmentResult",
+    "RequirementRule",
+    "RequirementRuleSet",
+    "RequirementRuleSource",
+    "RequirementSource",
+    "RequirementSourceSnapshot",
     "ResponsePlan",
     "ResponseTemplate",
     "ResponseTemplateVersion",
@@ -101,6 +186,8 @@ __all__ = [
     "TaskComment",
     "TaskEvent",
     "TaskRequestedItem",
+    "TrackerImportRow",
+    "TrackerImportRun",
     "UserPreference",
     "UserPrincipal",
     "UserRoleSnapshot",
