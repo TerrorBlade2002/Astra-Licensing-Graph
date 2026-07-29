@@ -37,6 +37,14 @@ class GraphJob(UUIDPrimaryKeyMixin, TimestampMixin, Base):
             unique=True,
             postgresql_where=text("job_type = 'INGEST_EMAIL' AND status IN ('PENDING', 'RUNNING')"),
         ),
+        Index(
+            "uq_graph_jobs_active_classify_email",
+            "email_id",
+            unique=True,
+            postgresql_where=text(
+                "job_type = 'CLASSIFY_EMAIL' AND status IN ('PENDING', 'RUNNING')"
+            ),
+        ),
         enum_check("job_type", JobType, "job_type"),
         enum_check("status", JobStatus, "status"),
     )

@@ -25,6 +25,7 @@ _SENSITIVE_KEY_PATTERN = re.compile(
 _DB_URL_CREDENTIALS = re.compile(r"(?P<scheme>[a-z0-9+]+://)(?P<user>[^:/@\s]+):(?P<pw>[^@/\s]+)@")
 
 _BEARER_TOKEN = re.compile(r"(?i)\b(bearer)\s+[a-z0-9\-._~+/=]{8,}")
+_URL_QUERY = re.compile(r"(?P<base>https://[^\s?\"']+)\?[^\s\"']+")
 
 
 def is_sensitive_key(key: str) -> bool:
@@ -49,6 +50,7 @@ def redact_text(text: str) -> str:
     """Redact bearer tokens and database credentials embedded in free text."""
     text = _DB_URL_CREDENTIALS.sub(r"\g<scheme>\g<user>:***@", text)
     text = _BEARER_TOKEN.sub(r"\1 " + REDACTED, text)
+    text = _URL_QUERY.sub(r"\g<base>?[REDACTED_QUERY]", text)
     return text
 
 
@@ -119,6 +121,10 @@ def configure_logging(level: str, log_format: str, environment: str) -> None:
     for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
         logging.getLogger(name).handlers = []
         logging.getLogger(name).propagate = True
+    # HTTPX's INFO request line contains the full URL. Upload-session URLs are
+    # signed bearer-like capabilities and must never reach broad logs.
+    for name in ("httpx", "httpcore"):
+        logging.getLogger(name).setLevel(logging.WARNING)
 
 
 def log_with_fields(logger: logging.Logger, level: int, message: str, **fields: Any) -> None:

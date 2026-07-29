@@ -9,6 +9,17 @@ __pycache__/
 .coverage
 coverage.xml
 htmlcov/
+.codex-*.log
+
+# Node dependencies
+node_modules/
+
+# Frontend build and browser-test artifacts
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
+frontend/*.tsbuildinfo
 
 # Environment / secrets
 .env

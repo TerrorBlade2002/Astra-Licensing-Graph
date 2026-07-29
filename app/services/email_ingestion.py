@@ -262,6 +262,13 @@ class EmailIngestionService:
                 f"Attachment ingestion completed. {len(statuses)} attachment(s).",
                 metadata={"attachment_count": len(statuses)},
             )
+            if self.settings.classification_enabled and self.settings.classification_auto_enqueue:
+                await GraphJobService(self.session, self.settings).enqueue_classify_email(
+                    mailbox_id=email.mailbox_id,
+                    email_id=email.id,
+                    reason="evidence ingestion completed",
+                )
+                await self.session.commit()
         else:
             raise DomainError(
                 "Attachments still pending after ingestion round.",

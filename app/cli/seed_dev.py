@@ -34,6 +34,7 @@ from app.models import (
     OutboundDraft,
     TaskRequestedItem,
 )
+from app.services.response_template_service import ResponseTemplateService
 
 SEED_GRAPH_MESSAGE_ID = "SYNTH-GRAPH-MSG-0001"
 SEED_TASK_KEY = "LIC-SYNTH-0001"
@@ -185,9 +186,10 @@ async def seed(session: AsyncSession) -> str:
             task_id=task.id,
             mailbox_id=mailbox.id,
             graph_draft_message_id="SYNTH-DRAFT-0001",
-            status="SENT",
+            status="SENT_COPY_VERIFIED",
             subject="RE: Colorado Collection Agency License Renewal - Information Required",
             body_text="Synthetic draft body.",
+            delivery_status="UNKNOWN",
             created_by="dev-reviewer@example.invalid",
             sent_at=base_time + timedelta(hours=20),
         )
@@ -228,6 +230,7 @@ async def run() -> int:
         async with session_factory() as session:
             outcome = await seed(session)
             await session.commit()
+            await ResponseTemplateService(session).ensure_defaults("seed-dev-cli")
     finally:
         await engine.dispose()
     print(outcome)

@@ -45,13 +45,17 @@ class EmailType(StrEnum):
     SUBMISSION_CONFIRMATION = "submission_confirmation"
     LICENSE_OR_PROOF_RECEIVED = "license_or_proof_received"
     REGULATOR_CORRESPONDENCE = "regulator_correspondence"
+    INTERNAL_FOLLOWUP = "internal_followup"
     GENERAL_CORRESPONDENCE = "general_correspondence"
 
 
 class ReviewDecision(StrEnum):
+    PENDING = "PENDING"
+    IN_REVIEW = "IN_REVIEW"
     APPROVED = "APPROVED"
     CORRECTED = "CORRECTED"
     REJECTED = "REJECTED"
+    RECLASSIFICATION_REQUESTED = "RECLASSIFICATION_REQUESTED"
 
 
 class TaskStatus(StrEnum):
@@ -61,6 +65,8 @@ class TaskStatus(StrEnum):
     READY_TO_SEND = "READY_TO_SEND"
     COMPLETED = "COMPLETED"
     CANCELLED = "CANCELLED"
+    BLOCKED = "BLOCKED"
+    OVERDUE = "OVERDUE"
 
 
 class DraftStatus(StrEnum):

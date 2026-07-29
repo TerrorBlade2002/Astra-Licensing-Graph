@@ -27,8 +27,14 @@ from app.jobs.enums import JobType
 from app.jobs.repository import GraphJobRepository
 from app.jobs.service import GraphJobService
 from app.models import GraphJob
-from app.workers import email_ingestion, graph_sync, subscription_maintenance
+from app.workers import classification_jobs, email_ingestion, graph_sync, subscription_maintenance
+from app.workers.communication_jobs import CommunicationWorkerRunner
 from app.workers.context import WorkerContext
+from app.workers.document_jobs import (
+    DOCUMENT_QUEUE_TYPES,
+    DocumentWorkerRunner,
+    resolve_document_job_types,
+)
 from app.workers.heartbeat import beat
 
 logger = logging.getLogger(__name__)
@@ -41,6 +47,7 @@ QUEUE_JOB_TYPES: dict[str, list[JobType]] = {
     ],
     "sync": [JobType.SYNC_FOLDER],
     "ingestion": [JobType.INGEST_EMAIL],
+    "classification": [JobType.CLASSIFY_EMAIL],
 }
 
 _HANDLERS = {
@@ -49,6 +56,7 @@ _HANDLERS = {
     JobType.ENSURE_SUBSCRIPTION.value: subscription_maintenance.handle_subscription_job,
     JobType.RENEW_SUBSCRIPTION.value: subscription_maintenance.handle_subscription_job,
     JobType.RECREATE_SUBSCRIPTION.value: subscription_maintenance.handle_subscription_job,
+    JobType.CLASSIFY_EMAIL.value: classification_jobs.handle_classification_job,
 }
 
 
@@ -209,6 +217,24 @@ def resolve_job_types(queues: str) -> list[JobType]:
 async def run_worker(settings: Settings, args: argparse.Namespace) -> int:
     ctx = WorkerContext.build(settings, worker_id=args.worker_id)
     try:
+        queue_names = {value.strip().lower() for value in args.queues.split(",") if value.strip()}
+        communication_names = {"communications", "drafts", "send", "moves"}
+        if queue_names & communication_names:
+            if queue_names - communication_names:
+                raise SystemExit("Communication queues must run in a separate worker process.")
+            return await CommunicationWorkerRunner(
+                ctx, once=args.once, max_jobs=args.max_jobs
+            ).run()
+        document_names = set(DOCUMENT_QUEUE_TYPES)
+        if queue_names & document_names:
+            if queue_names - document_names:
+                raise SystemExit("Graph and document queues must run in separate worker processes.")
+            return await DocumentWorkerRunner(
+                ctx,
+                job_types=resolve_document_job_types(args.queues),
+                once=args.once,
+                max_jobs=args.max_jobs,
+            ).run()
         runner = WorkerRunner(
             ctx,
             job_types=resolve_job_types(args.queues),

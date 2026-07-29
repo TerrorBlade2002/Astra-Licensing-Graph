@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import ForeignKey, Index
+from sqlalchemy import ForeignKey, Index, Integer, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -28,10 +28,15 @@ class ClassificationReview(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     classification_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("classifications.id", ondelete="CASCADE"), nullable=False
     )
-    decision: Mapped[str] = mapped_column(nullable=False)
-    reviewer_principal: Mapped[str] = mapped_column(nullable=False)
+    decision: Mapped[str] = mapped_column(nullable=False, server_default=text("'PENDING'"))
+    reviewer_principal: Mapped[str | None]
     review_notes: Mapped[str | None]
     corrected_classification: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
-    reviewed_at: Mapped[datetime] = mapped_column(nullable=False)
+    reviewed_at: Mapped[datetime | None]
+    claimed_at: Mapped[datetime | None]
+    claim_expires_at: Mapped[datetime | None]
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
+    rejection_reason: Mapped[str | None]
+    reclassification_reason: Mapped[str | None]
 
     classification: Mapped[Classification] = relationship(back_populates="reviews")

@@ -141,7 +141,7 @@ async def test_full_pipeline_from_notification_to_attachments_saved(
     email = await session.scalar(select(Email))
     assert email is not None
     assert email.graph_message_id == MSG
-    assert email.processing_state == "ATTACHMENTS_SAVED"
+    assert email.processing_state == "CLASSIFIED"
     assert email.full_message_json_sha256 is not None
     assert email.raw_mime_sha256 is not None
 
@@ -157,8 +157,9 @@ async def test_full_pipeline_from_notification_to_attachments_saved(
     jobs = (await session.scalars(select(GraphJob))).all()
     assert {j.status for j in jobs} == {JobStatus.COMPLETED.value}
 
-    # 13. No classification, task, draft, send, or move occurred.
-    assert await session.scalar(select(func.count(Classification.id))) == 0
+    # 13. Milestone 4 classifies automatically, but human approval still gates
+    # task creation and no draft, send, or move is allowed.
+    assert await session.scalar(select(func.count(Classification.id))) == 1
     assert await session.scalar(select(func.count(LicensingTask.id))) == 0
     assert await session.scalar(select(func.count(OutboundDraft.id))) == 0
     for call in respx.calls:

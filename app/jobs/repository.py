@@ -120,7 +120,7 @@ class GraphJobRepository:
             GraphJob.job_type == job_type.value,
             GraphJob.status.in_(ACTIVE_JOB_STATUSES),
         )
-        if job_type == JobType.INGEST_EMAIL:
+        if job_type in (JobType.INGEST_EMAIL, JobType.CLASSIFY_EMAIL):
             if email_id is None:
                 return None
             stmt = stmt.where(GraphJob.email_id == email_id)

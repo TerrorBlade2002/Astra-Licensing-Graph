@@ -1,0 +1,1 @@
+"""Controlled outbound communication domain."""

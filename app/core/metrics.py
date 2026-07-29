@@ -109,6 +109,148 @@ GRAPH_WORKER_HEARTBEAT_AGE_SECONDS = Gauge(
     registry=REGISTRY,
 )
 
+# SharePoint/document metrics deliberately use no document, filename, path,
+# jurisdiction, or license-number labels.
+SHAREPOINT_REQUESTS_TOTAL = Counter(
+    "sharepoint_requests_total",
+    "SharePoint Graph requests",
+    ["operation", "outcome"],
+    registry=REGISTRY,
+)
+SHAREPOINT_REQUEST_DURATION_SECONDS = Histogram(
+    "sharepoint_request_duration_seconds",
+    "SharePoint Graph request duration",
+    ["operation"],
+    registry=REGISTRY,
+)
+SHAREPOINT_429_TOTAL = Counter(
+    "sharepoint_429_total", "SharePoint throttling responses", registry=REGISTRY
+)
+SHAREPOINT_RETRIES_TOTAL = Counter(
+    "sharepoint_retries_total", "SharePoint request retries", ["reason"], registry=REGISTRY
+)
+SHAREPOINT_UPLOADS_TOTAL = Counter(
+    "sharepoint_uploads_total", "SharePoint uploads", ["method", "outcome"], registry=REGISTRY
+)
+SHAREPOINT_UPLOAD_BYTES_TOTAL = Counter(
+    "sharepoint_upload_bytes_total", "Bytes uploaded to SharePoint", registry=REGISTRY
+)
+SHAREPOINT_UPLOAD_FAILURES_TOTAL = Counter(
+    "sharepoint_upload_failures_total", "Failed SharePoint uploads", registry=REGISTRY
+)
+SHAREPOINT_UPLOAD_SESSIONS_TOTAL = Counter(
+    "sharepoint_upload_sessions_total", "SharePoint upload sessions created", registry=REGISTRY
+)
+SHAREPOINT_UPLOAD_SESSION_RESTARTS_TOTAL = Counter(
+    "sharepoint_upload_session_restarts_total",
+    "SharePoint upload session restarts",
+    registry=REGISTRY,
+)
+DOCUMENTS_CREATED_TOTAL = Counter("documents_created_total", "Documents created", registry=REGISTRY)
+DOCUMENTS_PROMOTED_TOTAL = Counter(
+    "documents_promoted_total", "Attachments promoted", registry=REGISTRY
+)
+DOCUMENTS_DUPLICATES_TOTAL = Counter(
+    "documents_duplicates_total", "Exact document duplicates", registry=REGISTRY
+)
+DOCUMENTS_APPROVED_TOTAL = Counter(
+    "documents_approved_total", "Documents approved", registry=REGISTRY
+)
+DOCUMENTS_REJECTED_TOTAL = Counter(
+    "documents_rejected_total", "Documents rejected", registry=REGISTRY
+)
+DOCUMENTS_EXPIRING_TOTAL = Counter(
+    "documents_expiring_total", "Document expiry observations", ["window"], registry=REGISTRY
+)
+DOCUMENT_HASH_MISMATCH_TOTAL = Counter(
+    "document_hash_mismatch_total", "Document hash mismatches", registry=REGISTRY
+)
+SHAREPOINT_DELTA_PAGES_TOTAL = Counter(
+    "sharepoint_delta_pages_total", "SharePoint delta pages processed", registry=REGISTRY
+)
+SHAREPOINT_DELTA_CHANGES_TOTAL = Counter(
+    "sharepoint_delta_changes_total", "SharePoint delta changes processed", registry=REGISTRY
+)
+SHAREPOINT_EXTERNAL_DELETIONS_TOTAL = Counter(
+    "sharepoint_external_deletions_total", "Externally deleted governed files", registry=REGISTRY
+)
+DOCUMENT_JOBS_PENDING = Gauge("document_jobs_pending", "Pending document jobs", registry=REGISTRY)
+DOCUMENT_JOBS_FAILED_REVIEW = Gauge(
+    "document_jobs_failed_review", "Document jobs requiring review", registry=REGISTRY
+)
+
+# Controlled communications never label by recipient, subject, Graph ID,
+# document filename, task ID, or license number.
+COMMUNICATION_RESPONSE_PLANS_TOTAL = Counter(
+    "communication_response_plans_total", "Response plans created", registry=REGISTRY
+)
+COMMUNICATION_DRAFTS_CREATED_TOTAL = Counter(
+    "communication_drafts_created_total", "Local drafts created", registry=REGISTRY
+)
+COMMUNICATION_DRAFT_REVISIONS_TOTAL = Counter(
+    "communication_draft_revisions_total", "Immutable draft revisions", registry=REGISTRY
+)
+COMMUNICATION_DRAFTS_PENDING_REVIEW = Gauge(
+    "communication_drafts_pending_review", "Drafts pending content review", registry=REGISTRY
+)
+COMMUNICATION_DRAFTS_PENDING_SEND_APPROVAL = Gauge(
+    "communication_drafts_pending_send_approval", "Drafts pending send approval", registry=REGISTRY
+)
+COMMUNICATION_DRAFT_VALIDATION_FAILURES_TOTAL = Counter(
+    "communication_draft_validation_failures_total", "Draft validation failures", registry=REGISTRY
+)
+COMMUNICATION_RECIPIENT_POLICY_BLOCKS_TOTAL = Counter(
+    "communication_recipient_policy_blocks_total", "Recipient policy blocks", registry=REGISTRY
+)
+COMMUNICATION_ATTACHMENTS_SELECTED_TOTAL = Counter(
+    "communication_attachments_selected_total", "Controlled attachments selected", registry=REGISTRY
+)
+COMMUNICATION_ATTACHMENT_BYTES_TOTAL = Counter(
+    "communication_attachment_bytes_total", "Controlled attachment bytes", registry=REGISTRY
+)
+COMMUNICATION_SEND_APPROVALS_TOTAL = Counter(
+    "communication_send_approvals_total", "Exact-snapshot send approvals", registry=REGISTRY
+)
+COMMUNICATION_SEND_APPROVALS_INVALIDATED_TOTAL = Counter(
+    "communication_send_approvals_invalidated_total",
+    "Invalidated send approvals",
+    registry=REGISTRY,
+)
+COMMUNICATION_SEND_JOBS_TOTAL = Counter(
+    "communication_send_jobs_total", "Send jobs queued", registry=REGISTRY
+)
+COMMUNICATION_SEND_ACCEPTED_TOTAL = Counter(
+    "communication_send_accepted_total", "Graph send requests accepted", registry=REGISTRY
+)
+COMMUNICATION_SEND_AMBIGUOUS_TOTAL = Counter(
+    "communication_send_ambiguous_total", "Ambiguous send outcomes", registry=REGISTRY
+)
+COMMUNICATION_SEND_FAILED_REVIEW_TOTAL = Counter(
+    "communication_send_failed_review_total", "Sends requiring review", registry=REGISTRY
+)
+COMMUNICATION_SENT_COPY_VERIFIED_TOTAL = Counter(
+    "communication_sent_copy_verified_total", "Sent copies verified", registry=REGISTRY
+)
+COMMUNICATION_SEND_RECONCILIATION_DURATION_SECONDS = Histogram(
+    "communication_send_reconciliation_duration_seconds",
+    "Sent-copy reconciliation duration",
+    registry=REGISTRY,
+)
+COMMUNICATION_MOVE_JOBS_TOTAL = Counter(
+    "communication_move_jobs_total", "Source move jobs", registry=REGISTRY
+)
+COMMUNICATION_MOVE_FAILURES_TOTAL = Counter(
+    "communication_move_failures_total", "Source move failures", registry=REGISTRY
+)
+COMMUNICATION_WORKFLOWS_COMPLETED_TOTAL = Counter(
+    "communication_workflows_completed_total", "Email workflows completed", registry=REGISTRY
+)
+COMMUNICATION_OLDEST_PENDING_APPROVAL_AGE_SECONDS = Gauge(
+    "communication_oldest_pending_approval_age_seconds",
+    "Age of oldest pending send approval",
+    registry=REGISTRY,
+)
+
 
 def render_metrics() -> bytes:
     return generate_latest(REGISTRY)

@@ -1,0 +1,1 @@
+"""Portal authentication tests."""

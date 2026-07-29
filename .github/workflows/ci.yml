@@ -74,6 +74,7 @@ jobs:
         run: |
           echo "127.0.0.2 graph.microsoft.com" | sudo tee -a /etc/hosts
           echo "127.0.0.2 login.microsoftonline.com" | sudo tee -a /etc/hosts
+          echo "127.0.0.2 api.openai.com" | sudo tee -a /etc/hosts
 
       - name: Tests with coverage (unit, integration, mocked Graph)
         run: pytest --cov=app --cov-report=term --cov-fail-under=85
@@ -82,4 +83,52 @@ jobs:
         run: |
           # The blackhole entries above guarantee it; this step documents the
           # invariant explicitly for reviewers.
-          echo "graph.microsoft.com and login.microsoftonline.com were blackholed for the entire test run."
+          echo "Microsoft Graph, Entra login, and OpenAI API hosts were blackholed for the entire test run."
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Frontend install, typecheck, tests, and build
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run typecheck
+          npm run lint
+          npm test
+          npm run build
+
+      - name: Verify no provider secret in frontend assets
+        run: |
+          ! grep -rInE '(OPENAI_API_KEY|sk-[A-Za-z0-9_-]{16,})' frontend/dist
+
+      - name: Playwright portal workflow
+        env:
+          APP_ENV: test
+          AUTH_MODE: development
+        run: |
+          python -m app.cli.seed_milestone4 --reset
+          python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 > backend-e2e.log 2>&1 &
+          BACKEND_PID=$!
+          (cd frontend && npm run dev -- --host 127.0.0.1 > ../frontend-e2e.log 2>&1) &
+          FRONTEND_PID=$!
+          trap 'kill "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null || true' EXIT
+          for URL in http://127.0.0.1:8000/health http://127.0.0.1:5173; do
+            for ATTEMPT in {1..30}; do
+              curl --fail --silent "$URL" > /dev/null && break
+              sleep 1
+            done
+            curl --fail --silent "$URL" > /dev/null
+          done
+          cd frontend
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+
+      - name: Verify no upload-session URL leaked to artifacts
+        if: always()
+        run: |
+          ! grep -rInE 'https://[^ ]+(upload|createUploadSession)' \
+            backend-e2e.log frontend-e2e.log frontend/test-results frontend/playwright-report \
+            2>/dev/null

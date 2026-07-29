@@ -4,7 +4,13 @@ Production backend foundation for Astra Business Services' licensing-mailbox
 automation: PostgreSQL data model, FastAPI read API, atomic email
 state-machine, and tooling to import the PowerShell prototype's data.
 
-## Current milestone boundary (Milestone 2)
+## Current milestone boundary (Milestone 5)
+
+Milestone 5 adds controlled response plans, immutable local and Graph draft
+revisions, governed attachments, separate exact-snapshot send approval,
+durable send/Sent Items reconciliation, verified source routing, and atomic
+email-workflow completion. Graph draft, send, move, reply-all, BCC, and large
+attachment features remain gated for staging acceptance.
 
 **Milestone 1** delivered the PostgreSQL schema, read API, state machine with
 audit + transactional outbox, prototype importer, and CI.
@@ -18,12 +24,10 @@ evidence capture (full JSON + raw MIME + attachments with SHA-256), workers,
 a scheduler, Prometheus metrics, and operational CLI/API. Processing stops at
 `ATTACHMENTS_SAVED`.
 
-**Explicitly out of scope (later milestones):** classification, task
-creation, Outlook drafts, sending mail, moving messages, SharePoint storage,
-Service Bus publishing, Key Vault, NMLS automation, the review portal
-frontend, and production Entra JWT auth. The automated test suite makes **no
-live Microsoft calls** — every Graph interaction is respx-mocked, and CI
-blackholes the Graph hostnames.
+**Explicitly out of scope:** autonomous regulator/NMLS filing, license
+inventory and renewal engines, and autonomous delivery claims. Automated
+tests use mocked provider calls only; CI blackholes Microsoft Graph, Entra
+login, and OpenAI hostnames and never sends an email.
 
 ### Graph documentation
 
@@ -33,10 +37,17 @@ blackholes the Graph hostnames.
 [operations runbook](docs/graph-operations-runbook.md) ·
 [staging acceptance](docs/staging-acceptance.md)
 
+Milestone 5 operations: [response drafting](docs/response-drafting.md) ·
+[send approval](docs/send-approval-workflow.md) ·
+[Graph draft and send](docs/graph-draft-and-send.md) ·
+[communications runbook](docs/communications-operations-runbook.md) ·
+[staging acceptance](docs/milestone5-staging-acceptance.md)
+
 ### Running the workers
 
 ```powershell
 python -m app.workers.runner --queues subscriptions,sync,ingestion
+python -m app.workers.runner --queues communications
 python -m app.workers.scheduling          # single-replica periodic scheduler
 ```
 
@@ -177,21 +188,40 @@ Quick checks:
 - `GET /api/v1/system/version`
 - `GET /api/v1/mailboxes`, `GET /api/v1/emails`, `GET /api/v1/tasks`
 - `GET /api/v1/audit-events`
+- `GET /api/v1/documents`, `GET /api/v1/documents/{id}`
+- `GET /api/v1/integrations/sharepoint/status`, `/drives`, `/jobs`
+
+## Milestone 3: SharePoint document repository
+
+Milestone 3 adds migration `0003_sharepoint_documents`, the governed document/version/link/event catalog, a `Sites.Selected` SharePoint client, simple and resumable uploads, metadata-column synchronization, attachment promotion, exact-hash deduplication, approval/reuse lifecycle, controlled downloads/previews, delta reconciliation, evidence migration, and leased document jobs.
+
+SharePoint remains disabled by default. Configure IDs using [docs/sharepoint-permissions.md](docs/sharepoint-permissions.md), run the non-destructive bootstrap in [docs/sharepoint-operations-runbook.md](docs/sharepoint-operations-runbook.md), and execute [docs/milestone3-staging-acceptance.md](docs/milestone3-staging-acceptance.md) with synthetic files only.
+
+## Milestone 4: classification, review portal, and tasks
+
+Migration `0004_classification_review` adds Entra user/role observations, the vendor registry, immutable rule/prompt/run records, review claims and field corrections, and task comments/events. Classification is deterministic-first; optional OpenAI Responses enrichment is disabled by default and gated by explicit approval/data-policy settings. Every initial result requires human review.
+
+```powershell
+alembic upgrade head
+uvicorn app.main:app --reload
+python -m app.workers.runner --queues classification
+cd frontend
+npm ci
+npm run dev
+```
+
+The portal is at <http://127.0.0.1:5173>. Local/test synthetic actor mode is replaced by MSAL authorization-code + PKCE when the `VITE_ENTRA_*` variables are configured. See [Entra setup](docs/entra-user-authentication.md), [classification architecture](docs/classification-architecture.md), [review workflow](docs/human-review-workflow.md), [task workflow](docs/task-workflow.md), and [staging acceptance](docs/milestone4-staging-acceptance.md).
 
 ## Security notes
 
-- No Microsoft client secret, Graph token, or LLM key exists anywhere in this
-  repository; Milestone 1 makes no external calls.
+- No Microsoft client secret, Graph token, or model-provider key exists in this repository. CI blocks live Microsoft/OpenAI hosts and uses mocks.
 - Logs are structured JSON with enforced redaction (DB credentials, bearer
   tokens, delta links, sensitive keys). Email bodies are never logged and are
   excluded from list endpoints and from detail responses unless
   `include_body=true` is requested.
 - Graph delta links are opaque: never returned by the API, never fully
   logged.
-- `AUTH_MODE=development` (synthetic actor from a controlled header) is for
-  local/test only and is rejected when `APP_ENV=production`. Microsoft Entra
-  JWT validation will be added before the portal is exposed to
-  organizational users.
+- `AUTH_MODE=development` is local/test only. Entra mode validates signature, issuer, single tenant, backend audience, time claims, and API scope/roles before backend authorization.
 - Correlation IDs from clients are accepted only when they are valid UUIDs.
 
 ## Troubleshooting

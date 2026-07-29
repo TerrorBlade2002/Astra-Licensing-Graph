@@ -73,6 +73,28 @@ class GraphJobService:
             correlation_id=_correlation_uuid(),
         )
 
+    async def enqueue_classify_email(
+        self,
+        *,
+        mailbox_id: uuid.UUID,
+        email_id: uuid.UUID,
+        reason: str,
+        reclassification: bool = False,
+    ) -> EnqueueResult:
+        return await self.repo.enqueue(
+            job_type=JobType.CLASSIFY_EMAIL,
+            idempotency_key=(
+                f"classify:{email_id}:{'reclass' if reclassification else 'initial'}:{uuid.uuid4()}"
+            ),
+            max_attempts=self.settings.classification_job_max_attempts,
+            mailbox_id=mailbox_id,
+            email_id=email_id,
+            reason=reason,
+            payload={"reclassification": reclassification},
+            priority=80,
+            correlation_id=_correlation_uuid(),
+        )
+
     async def enqueue_subscription_maintenance(
         self,
         *,

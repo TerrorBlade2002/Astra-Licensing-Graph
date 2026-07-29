@@ -1,0 +1,2 @@
+{"dataset_version":"v1","input":{"subject":"Colorado collection agency license information required","body":"Please provide:\n- Current toll-free telephone number","sender_email":"agent@rasi.com"},"expected":{"vendor":"RASI","email_type":"missing_information_request","states":["Colorado"]}}
+{"dataset_version":"v1","input":{"subject":"NMLS submission confirmation","body":"Your filing was successfully submitted for Texas.","sender_email":"notice@mortgage.nationwidelicensingsystem.org"},"expected":{"vendor":"NMLS","email_type":"submission_confirmation","states":["Texas"]}}

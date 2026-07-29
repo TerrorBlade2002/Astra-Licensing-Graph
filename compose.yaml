@@ -35,5 +35,13 @@ services:
       timeout: 5s
       retries: 5
 
+  portal:
+    build: ./frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      app:
+        condition: service_healthy
+
 volumes:
   astra_pg_data:

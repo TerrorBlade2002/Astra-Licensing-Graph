@@ -126,6 +126,7 @@ class GraphHttpClient:
         url: str,
         *,
         json_body: dict[str, Any] | None = None,
+        content_body: bytes | None = None,
         params: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
         operation: str = "request",
@@ -143,7 +144,12 @@ class GraphHttpClient:
             started = time.perf_counter()
             try:
                 response = await self._client.request(
-                    method, url, json=json_body, params=params, headers=request_headers
+                    method,
+                    url,
+                    json=json_body,
+                    content=content_body,
+                    params=params,
+                    headers=request_headers,
                 )
             except Exception as exc:
                 duration = time.perf_counter() - started
@@ -246,6 +252,28 @@ class GraphHttpClient:
 
     # ------------------------------------------------------------ public API
 
+    async def request_once(
+        self,
+        method: str,
+        url: str,
+        *,
+        json_body: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        force_token_refresh: bool = False,
+    ) -> tuple[httpx.Response, str]:
+        """Execute exactly once.
+
+        Non-idempotent communication operations use this boundary so a lost
+        response can be reconciled rather than silently replayed.
+        """
+        request_headers, client_request_id = await self._headers(
+            force_token_refresh=force_token_refresh, extra=headers
+        )
+        response = await self._client.request(method, url, json=json_body, headers=request_headers)
+        if response.status_code not in _SUCCESS_STATUSES:
+            raise _api_error(response, client_request_id)
+        return response, client_request_id
+
     async def get_json(
         self,
         url: str,
@@ -289,6 +317,28 @@ class GraphHttpClient:
         self, url: str, *, headers: dict[str, str] | None = None, operation: str = "delete"
     ) -> None:
         await self._send_with_retry("DELETE", url, headers=headers, operation=operation)
+
+    async def put_bytes(
+        self,
+        url: str,
+        data: bytes,
+        *,
+        headers: dict[str, str] | None = None,
+        operation: str = "put",
+    ) -> dict[str, Any]:
+        response = await self._send_with_retry(
+            "PUT", url, content_body=data, headers=headers, operation=operation
+        )
+        return self._parse_json(response)
+
+    async def download_bytes(self, url: str, *, max_bytes: int) -> bytes:
+        headers, client_request_id = await self._headers(force_token_refresh=False, extra=None)
+        response = await self._client.get(url, headers=headers, follow_redirects=True)
+        if response.status_code not in _SUCCESS_STATUSES:
+            raise _api_error(response, client_request_id)
+        if len(response.content) > max_bytes:
+            raise ValueError("Controlled document exceeds the communication download limit.")
+        return response.content
 
     def _parse_json(self, response: httpx.Response) -> dict[str, Any]:
         if response.status_code == 204 or not response.content:

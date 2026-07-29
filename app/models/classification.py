@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import (
@@ -72,6 +72,7 @@ class Classification(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     summary: Mapped[str | None]
     proposed_action: Mapped[str | None]
+    suggested_destination: Mapped[str | None]
     confidence: Mapped[float | None] = mapped_column(Numeric(4, 3), nullable=True)
     requires_human_review: Mapped[bool] = mapped_column(nullable=False)
     classification_method: Mapped[str] = mapped_column(nullable=False)
@@ -83,6 +84,23 @@ class Classification(UUIDPrimaryKeyMixin, CreatedAtMixin, Base):
     model_output: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     evidence: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
     is_current: Mapped[bool] = mapped_column(nullable=False, server_default=text("true"))
+    parent_classification_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("classifications.id", ondelete="SET NULL"), nullable=True
+    )
+    classification_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey(
+            "classification_runs.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="fk_classifications_classification_run_id_classification_runs",
+        ),
+        nullable=True,
+    )
+    review_status: Mapped[str] = mapped_column(nullable=False, server_default=text("'PENDING'"))
+    reviewed_at: Mapped[datetime | None]
+    reviewed_by_actor: Mapped[str | None]
+    rejection_reason: Mapped[str | None]
+    source_revision: Mapped[int] = mapped_column(Integer, nullable=False, server_default=text("1"))
 
     email: Mapped[Email] = relationship(back_populates="classifications")
     reviews: Mapped[list[ClassificationReview]] = relationship(back_populates="classification")
