@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC
+from pathlib import Path
 
 import pytest
 
@@ -81,5 +82,6 @@ def test_parse_date() -> None:
 def test_to_file_uri() -> None:
     uri = to_file_uri("C:\\Users\\someone\\Desktop\\file.eml")
     assert uri == "file:///C:/Users/someone/Desktop/file.eml"
+    assert to_file_uri("/tmp/file.eml") == Path("/tmp/file.eml").resolve().as_uri()
     assert to_file_uri(None) is None
     assert to_file_uri("") is None

@@ -100,10 +100,13 @@ def parse_date(value: Any) -> date | None:
     return date.fromisoformat(str(value)[:10])
 
 
-def to_file_uri(windows_path: str | None) -> str | None:
-    if not windows_path:
+def to_file_uri(file_path: str | None) -> str | None:
+    if not file_path:
         return None
-    return PureWindowsPath(windows_path).as_uri()
+    windows_path = PureWindowsPath(file_path)
+    if windows_path.is_absolute():
+        return windows_path.as_uri()
+    return Path(file_path).resolve().as_uri()
 
 
 def load_json(path: Path) -> Any:
