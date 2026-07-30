@@ -7,6 +7,7 @@ from sqlalchemy import text
 
 from app.api.v1 import (
     audit,
+    case_correspondence,
     classification_reviews,
     communications,
     compliance_cases,
@@ -63,6 +64,7 @@ api_router.include_router(license_inventory.router)
 api_router.include_router(requirement_matrix.router)
 api_router.include_router(requirement_sources.router)
 api_router.include_router(compliance_cases.router)
+api_router.include_router(case_correspondence.router)
 api_router.include_router(deadlines.router)
 api_router.include_router(information_registry.router)
 api_router.include_router(document_packets.router)

@@ -287,3 +287,17 @@ class LicenseEventSourceType(StrEnum):
     MANUAL_UPDATE = "MANUAL_UPDATE"
     CASE_COMPLETION = "CASE_COMPLETION"
     SYSTEM_LIFECYCLE = "SYSTEM_LIFECYCLE"
+
+
+class CaseEmailLinkStatus(StrEnum):
+    """Lifecycle of a proposed correspondence link.
+
+    A link is only evidence once a human has confirmed it. Everything the
+    portal presents as a case's correspondence is drawn from CONFIRMED links,
+    so a wrong automatic match is visible and reversible, never silent.
+    """
+
+    PROPOSED = "PROPOSED"
+    CONFIRMED = "CONFIRMED"
+    REJECTED = "REJECTED"
+    SUPERSEDED = "SUPERSEDED"

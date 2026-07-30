@@ -37,6 +37,7 @@ from app.licensing.enums import (
     ActivityCategory,
     BondChannel,
     BondStatus,
+    CaseEmailLinkStatus,
     CaseInformationRequestStatus,
     CasePriority,
     CaseStage,
@@ -472,6 +473,50 @@ class ComplianceCaseStageEvent(UUIDPrimaryKeyMixin, Base):
     #: recomputing from the whole event stream.
     seconds_in_previous_stage: Mapped[int | None] = mapped_column(BigInteger)
     occurred_at: Mapped[datetime] = mapped_column(nullable=False)
+
+
+class CaseEmailLink(UUIDPrimaryKeyMixin, TimestampMixin, Base):
+    """Correspondence attached to a compliance case, and who vouched for it.
+
+    The system proposes a link when a reviewed licensing email looks like it
+    belongs to an open case; a person confirms or rejects it. Only a CONFIRMED
+    link is treated as the case's correspondence, because attaching one legal
+    entity's thread to another entity's case is a reportable error, not a
+    display glitch. The match signals are stored so a reviewer can see *why*
+    a link was proposed rather than being asked to trust a score.
+    """
+
+    __tablename__ = "case_email_links"
+    __table_args__ = (
+        UniqueConstraint("compliance_case_id", "email_id", name="uq_case_email_link"),
+        Index("ix_case_email_links_case", "compliance_case_id", "link_status"),
+        Index("ix_case_email_links_status", "link_status", "proposed_at"),
+        Index("ix_case_email_links_conversation", "conversation_id"),
+        enum_check("link_status", CaseEmailLinkStatus, "ck_case_email_links_status"),
+    )
+
+    compliance_case_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("compliance_cases.id", ondelete="CASCADE"), nullable=False
+    )
+    email_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("emails.id", ondelete="CASCADE"), nullable=False
+    )
+    #: Graph conversation the email belongs to. Copied at link time so the
+    #: thread stays resolvable even if the message row is later archived.
+    conversation_id: Mapped[str | None]
+    link_status: Mapped[str] = mapped_column(nullable=False)
+    #: 0..1 confidence from the matcher. Advisory only: it orders the review
+    #: queue and never authorises a link on its own.
+    match_score: Mapped[float | None] = mapped_column(Numeric(4, 3))
+    #: Human-readable signals, e.g. ["license number 12345 matched", "vendor matched"].
+    match_reasons: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'{}'::jsonb")
+    )
+    proposed_by_actor: Mapped[str | None]
+    proposed_at: Mapped[datetime] = mapped_column(nullable=False)
+    decided_by_actor: Mapped[str | None]
+    decided_at: Mapped[datetime | None]
+    decision_reason: Mapped[str | None]
 
 
 class CaseInformationRequest(UUIDPrimaryKeyMixin, TimestampMixin, Base):

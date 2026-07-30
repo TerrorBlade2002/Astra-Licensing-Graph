@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { api } from "../api/client";
 import { ErrorState, Loading, Status } from "../components/common/States";
+import { RenewalTimeline } from "../components/licensing/RenewalTimeline";
 import type { LicenseRecord } from "../types";
 
 type Event = {
@@ -66,6 +67,7 @@ export function LicenseDetailPage() {
           ))}
         </section>
       </div>
+      <RenewalTimeline licenseId={id} />
     </main>
   );
 }

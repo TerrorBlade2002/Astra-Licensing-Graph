@@ -533,6 +533,76 @@ class CaseStageEventOut(BaseModel):
     occurred_at: str
 
 
+class CaseEmailLinkOut(BaseModel):
+    """A proposed or confirmed correspondence link, with its reasoning."""
+
+    id: str
+    compliance_case_id: str
+    case_key: str | None = None
+    email_id: str
+    conversation_id: str | None
+    link_status: str
+    match_score: float | None
+    match_reasons: dict[str, Any]
+    proposed_by_actor: str | None
+    proposed_at: str
+    decided_by_actor: str | None
+    decided_at: str | None
+    decision_reason: str | None
+    #: Context a reviewer needs to judge the match without opening the message.
+    email_subject: str | None = None
+    email_sender: str | None = None
+    email_received_at: str | None = None
+    legal_entity_name: str | None = None
+
+
+class CaseEmailLinkDecision(BaseModel):
+    reason: str | None = Field(default=None, max_length=1000)
+
+
+class CaseThreadMessageOut(BaseModel):
+    """One message in a case's confirmed correspondence.
+
+    Body content is deliberately excluded: the existing message endpoints own
+    that, with their own redaction rules.
+    """
+
+    id: str
+    conversation_id: str | None
+    subject: str | None
+    sender_name: str | None
+    sender_email: str | None
+    received_at: str | None
+    processing_state: str
+    has_attachments: bool
+    direction: str
+
+
+class RenewalTimelineEntry(BaseModel):
+    """One dated event in a licence's renewal history."""
+
+    occurred_at: str
+    category: str
+    summary: str
+    detail: str | None = None
+    actor_id: str | None = None
+    case_id: str | None = None
+    case_key: str | None = None
+    email_id: str | None = None
+    reference: dict[str, Any] = Field(default_factory=dict)
+
+
+class RenewalTimelineOut(BaseModel):
+    license_id: str
+    license_key: str
+    current_status: str
+    expiration_date: str | None
+    renewal_due_date: str | None
+    open_case_count: int
+    active_stage: str | None
+    entries: list[RenewalTimelineEntry]
+
+
 class InformationRequestCreate(BaseModel):
     question_text: str = Field(min_length=1, max_length=4000)
     information_definition_id: uuid.UUID | None = None

@@ -23,6 +23,7 @@ from app.models import (
     TaskRequestedItem,
 )
 from app.models.mixins import utcnow
+from app.services.case_email_link_service import CaseEmailLinkService
 from app.services.email_state import Actor, _transition_locked
 
 
@@ -168,6 +169,12 @@ class TaskCreationService:
                     status="PENDING",
                     available_at=now,
                 )
+            )
+            # Propose the cases this correspondence may belong to. Proposals are
+            # inert until a reviewer confirms one, so a bad match cannot alter
+            # the task, the email, or any case.
+            await CaseEmailLinkService(self.session).propose_for_email(
+                email, actor=actor, classification=classification
             )
             await _transition_locked(
                 self.session,

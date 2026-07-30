@@ -1844,3 +1844,84 @@ td small {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+/* Renewal timeline and correspondence review (Milestone 9) */
+.stage-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.stage-summary strong {
+  display: block;
+  font-size: 1.05rem;
+}
+.renewal-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-left: 2px solid var(--line);
+}
+.renewal-timeline li {
+  padding: 10px 0 10px 16px;
+  margin-left: 4px;
+  position: relative;
+}
+.renewal-timeline li::before {
+  content: "";
+  position: absolute;
+  left: -7px;
+  top: 18px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--forest);
+}
+.renewal-timeline li[data-category="EMAIL_RECEIVED"]::before {
+  background: var(--orange);
+}
+.renewal-timeline li[data-category="EMAIL_SENT"]::before {
+  background: var(--lime);
+}
+.renewal-timeline-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.renewal-timeline small,
+.renewal-timeline time {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+.link-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+.link-head small {
+  display: block;
+  color: var(--muted);
+}
+.match-score {
+  white-space: nowrap;
+  font-weight: 600;
+}
+.signal-list {
+  margin: 0 0 12px;
+  padding-left: 18px;
+}
+.signal-list code {
+  font-size: 0.78rem;
+  color: var(--forest);
+}
+.button-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.stack {
+  display: grid;
+  gap: 14px;
+}

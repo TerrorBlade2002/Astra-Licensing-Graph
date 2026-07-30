@@ -16,6 +16,7 @@ import { TaskBoardPage } from "../pages/TaskBoardPage";
 import { TaskDetailPage } from "../pages/TaskDetailPage";
 import { UnauthorizedPage } from "../pages/UnauthorizedPage";
 import { ComplianceCalendarPage } from "../pages/ComplianceCalendarPage";
+import { CorrespondenceReviewPage } from "../pages/CorrespondenceReviewPage";
 import { CurrentTrackerPage } from "../pages/CurrentTrackerPage";
 import { ComplianceCasePage } from "../pages/ComplianceCasePage";
 import { ComplianceCasesPage } from "../pages/ComplianceCasesPage";
@@ -80,6 +81,10 @@ export const router = createBrowserRouter([
       { path: "communications/status", element: <CommunicationStatusPage /> },
       { path: "licensing", element: <LicensingDashboardPage /> },
       { path: "licensing/tracker", element: <CurrentTrackerPage /> },
+      {
+        path: "licensing/correspondence",
+        element: <CorrespondenceReviewPage />,
+      },
       { path: "licensing/licenses", element: <LicenseInventoryPage /> },
       { path: "licensing/licenses/:id", element: <LicenseDetailPage /> },
       {

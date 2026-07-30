@@ -9,6 +9,7 @@ const links = [
   ["/licensing/tracker", "Current tracker", "T"],
   ["/licensing/licenses", "Licenses", "I"],
   ["/licensing/cases", "Compliance cases", "C"],
+  ["/licensing/correspondence", "Correspondence review", "M"],
   ["/licensing/calendar", "Compliance calendar", "D"],
   ["/licensing/requirements", "Requirement matrix", "R"],
   ["/licensing/information", "Information registry", "K"],

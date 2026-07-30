@@ -42,6 +42,7 @@ from app.models.information import (
 from app.models.job import GraphJob
 from app.models.licensing import (
     BusinessActivity,
+    CaseEmailLink,
     CaseInformationRequest,
     ComplianceCase,
     ComplianceCaseStageEvent,
@@ -123,6 +124,7 @@ __all__ = [
     "Base",
     "BrowserSession",
     "BusinessActivity",
+    "CaseEmailLink",
     "CaseInformationRequest",
     "Classification",
     "ClassificationFieldCorrection",
