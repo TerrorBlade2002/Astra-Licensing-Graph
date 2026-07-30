@@ -3,8 +3,8 @@
   "build": {
     "builder": "DOCKERFILE",
     "dockerfilePath": "Dockerfile",
-    "comment": "Watch patterns are relative to this service's root directory (frontend), so '**' here means 'any change under frontend/'. A backend-only change touches nothing in this path and does not rebuild the portal.",
-    "watchPatterns": ["**"]
+    "comment": "Railway evaluates watch patterns from the repository root, even when this service's root directory is frontend.",
+    "watchPatterns": ["/frontend/**"]
   },
   "deploy": {
     "healthcheckPath": "/healthz",
