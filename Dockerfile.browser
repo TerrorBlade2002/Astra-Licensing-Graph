@@ -1,0 +1,25 @@
+# Browser-worker image: the only image that ships Chromium. Deployed solely
+# when portal assistance is enabled; it has no public domain and stores no
+# portal credential, cookie, or browser profile beyond the session.
+FROM mcr.microsoft.com/playwright/python:v1.55.0-noble
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    BROWSER_TEMP_ROOT=/tmp/astra-portals
+
+WORKDIR /srv/app
+
+COPY requirements.lock.txt ./
+RUN pip install --no-cache-dir -r requirements.lock.txt
+
+COPY pyproject.toml README.md alembic.ini ./
+COPY app ./app
+COPY migrations ./migrations
+
+RUN pip install --no-cache-dir --no-deps . \
+    && install -d -m 0700 -o pwuser -g pwuser /tmp/astra-portals
+
+USER pwuser
+
+CMD ["python", "-m", "app.workers.runner", "--queues", "portals"]

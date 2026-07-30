@@ -86,6 +86,29 @@ class DocumentJobRepository:
         await self.session.commit()
         return job
 
+    async def recover_expired_leases(self) -> int:
+        """Return jobs whose worker died back to the queue.
+
+        A container restart (a routine event on a managed platform) must not
+        strand an upload or reconciliation job in ``RUNNING`` forever.
+        """
+        result = await self.session.execute(
+            update(DocumentJob)
+            .where(
+                DocumentJob.status == DocumentJobStatus.RUNNING.value,
+                DocumentJob.lease_expires_at.is_not(None),
+                DocumentJob.lease_expires_at < utcnow(),
+            )
+            .values(
+                status=DocumentJobStatus.FAILED_RETRYABLE.value,
+                lease_owner=None,
+                lease_expires_at=None,
+                available_at=utcnow(),
+            )
+        )
+        await self.session.commit()
+        return int(getattr(result, "rowcount", 0) or 0)
+
     async def extend_lease(self, job_id: uuid.UUID, worker_id: str, lease_seconds: int) -> bool:
         result = await self.session.execute(
             update(DocumentJob)

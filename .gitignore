@@ -6,6 +6,7 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 .pytest_cache/
+.pytest-tmp/
 .coverage
 coverage.xml
 htmlcov/
@@ -26,12 +27,15 @@ frontend/*.tsbuildinfo
 .env.*
 !.env.example
 
-# Prototype runtime data (contains real Graph IDs and mailbox content)
-prototype-data/
-attachments/
+# Prototype runtime data (contains real Graph IDs and mailbox content).
+# Leading slash matters: an unanchored "evidence/" also matches app/evidence/,
+# which silently excluded that package from version control and from any
+# deployment that honours .gitignore.
+/prototype-data/
+/attachments/
 
 # Local evidence store (mail content; never committed)
-evidence/
+/evidence/
 
 # Editor/OS
 .idea/

@@ -27,6 +27,12 @@ from app.core.metrics import (
 from app.db.session import create_engine, create_session_factory
 from app.models import OutboundDraft
 from app.models.mixins import utcnow
+from app.services.compliance_case_service import ComplianceCaseService
+from app.services.deadline_service import DeadlineService
+from app.services.form_preparation_service import FormPreparationService
+from app.services.license_inventory_service import LicenseInventoryService
+from app.services.portal_metrics_service import PortalMetricsService
+from app.services.requirement_assessment_service import RequirementAssessmentService
 from app.webhooks.graph_lifecycle import router as graph_lifecycle_router
 from app.webhooks.graph_messages import router as graph_messages_router
 
@@ -95,6 +101,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 COMMUNICATION_OLDEST_PENDING_APPROVAL_AGE_SECONDS.set(
                     max(0.0, (utcnow() - oldest).total_seconds()) if oldest else 0.0
                 )
+                await LicenseInventoryService(session).refresh_metrics()
+                await ComplianceCaseService(session, settings).refresh_metrics()
+                await DeadlineService(session, settings).refresh_metrics()
+                await RequirementAssessmentService(session, settings).refresh_metrics()
+                await FormPreparationService(session, settings).refresh_metrics()
+                await PortalMetricsService(session).refresh()
         except SQLAlchemyError:
             # Health endpoints remain responsible for reporting database
             # readiness; metrics rendering itself must stay available.

@@ -5,6 +5,18 @@ import type { Actor } from "../../types";
 import { entraEnabled, msal } from "../../auth/msal";
 
 const links = [
+  ["/licensing", "Licensing overview", "L"],
+  ["/licensing/licenses", "License inventory", "I"],
+  ["/licensing/cases", "Compliance cases", "C"],
+  ["/licensing/calendar", "Compliance calendar", "D"],
+  ["/licensing/requirements", "Requirement matrix", "R"],
+  ["/licensing/information", "Information registry", "K"],
+  ["/licensing/packets", "Packet builder", "P"],
+  ["/licensing/forms", "Form preparation", "F"],
+  ["/portals", "Portal governance", "G"],
+  ["/portal-runs", "Portal assistance", "A"],
+  ["/licensing/sources", "Source governance", "S"],
+  ["/licensing/data-quality", "Data quality", "Q"],
   ["/communications/drafts", "Draft queue", "✎"],
   ["/communications/approvals", "Send approval", "✓"],
   ["/communications/status", "Communication status", "↗"],

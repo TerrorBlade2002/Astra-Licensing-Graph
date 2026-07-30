@@ -32,7 +32,7 @@ class WorkflowCompletionService:
         self.session = session
 
     async def complete(self, email_id: uuid.UUID, actor: CurrentActor) -> WorkflowCompletionRecord:
-        existing = await self.session.scalar(
+        existing: WorkflowCompletionRecord | None = await self.session.scalar(
             select(WorkflowCompletionRecord).where(WorkflowCompletionRecord.email_id == email_id)
         )
         if existing:

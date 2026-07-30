@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import json
 from functools import lru_cache
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 
-from pydantic import Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import AliasChoices, Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 AppEnv = Literal["local", "test", "staging", "production"]
 AuthMode = Literal["development", "entra"]
@@ -16,6 +17,25 @@ EvidenceBackend = Literal["filesystem", "sharepoint"]
 SharePointPermissionMode = Literal["sites_selected", "tenant_wide"]
 UploadConflictBehavior = Literal["fail", "rename", "replace-current-version"]
 PacketArchiveFormat = Literal["ZIP", "NONE"]
+
+#: List settings read from the environment.
+#:
+#: ``NoDecode`` stops pydantic-settings from JSON-decoding the raw value before
+#: validation. Without it, ``CORS_ORIGINS=https://portal.example.com`` raises a
+#: parse error and only JSON array syntax is accepted — so the comma-splitting
+#: validator below never saw environment values at all, and a list setting
+#: could not be configured outside a constructor call.
+StrList = Annotated[list[str], NoDecode]
+IntList = Annotated[list[int], NoDecode]
+
+_LOOPBACK_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "0.0.0.0"})
+
+
+def _is_loopback(url: str) -> bool:
+    """True when a URL (or DSN) resolves to this machine."""
+    authority = url.split("://", 1)[-1].split("/", 1)[0]
+    host = authority.rsplit("@", 1)[-1].split(":", 1)[0]
+    return host in _LOOPBACK_HOSTS
 
 
 class Settings(BaseSettings):
@@ -42,7 +62,12 @@ class Settings(BaseSettings):
     log_format: LogFormat = Field(default="json", alias="LOG_FORMAT")
     sql_echo: bool = Field(default=False, alias="SQL_ECHO")
 
-    cors_origins: list[str] = Field(default_factory=list, alias="CORS_ORIGINS")
+    cors_origins: StrList = Field(default_factory=list, alias="CORS_ORIGINS")
+
+    #: Public addresses of the deployed services. Used for operator diagnostics
+    #: and for the deployment checks below; the application never calls them.
+    frontend_url: str | None = Field(default=None, alias="FRONTEND_URL")
+    backend_url: str | None = Field(default=None, alias="BACKEND_URL")
 
     auth_mode: AuthMode = Field(default="development", alias="AUTH_MODE")
     entra_tenant_id: str | None = Field(default=None, alias="ENTRA_TENANT_ID")
@@ -54,7 +79,7 @@ class Settings(BaseSettings):
         default=None, alias="ENTRA_OPENID_CONFIGURATION_URL"
     )
     entra_jwks_cache_seconds: int = Field(default=3600, alias="ENTRA_JWKS_CACHE_SECONDS")
-    entra_allowed_algorithms: list[str] = Field(
+    entra_allowed_algorithms: StrList = Field(
         default_factory=lambda: ["RS256"], alias="ENTRA_ALLOWED_ALGORITHMS"
     )
     entra_clock_skew_seconds: int = Field(default=60, alias="ENTRA_CLOCK_SKEW_SECONDS")
@@ -89,7 +114,7 @@ class Settings(BaseSettings):
     openai_max_output_tokens: int = Field(default=1500, alias="OPENAI_MAX_OUTPUT_TOKENS")
     openai_store_responses: bool = Field(default=False, alias="OPENAI_STORE_RESPONSES")
     ai_data_policy_acknowledged: bool = Field(default=False, alias="AI_DATA_POLICY_ACKNOWLEDGED")
-    ai_allowed_data_classes: list[str] = Field(
+    ai_allowed_data_classes: StrList = Field(
         default_factory=lambda: ["licensing_email_sanitized"], alias="AI_ALLOWED_DATA_CLASSES"
     )
     ai_monthly_budget_usd: float = Field(default=0, alias="AI_MONTHLY_BUDGET_USD")
@@ -209,8 +234,12 @@ class Settings(BaseSettings):
 
     # ------------------------------------------------------------ Graph core
     graph_enabled: bool = Field(default=False, alias="GRAPH_ENABLED")
+    #: ``GRAPH_MAILBOX`` is the shorter name used by the Railway variable sets;
+    #: both spellings resolve to the single governed licensing mailbox.
     graph_expected_mailbox_address: str | None = Field(
-        default=None, alias="GRAPH_EXPECTED_MAILBOX_ADDRESS"
+        default=None,
+        validation_alias=AliasChoices("GRAPH_EXPECTED_MAILBOX_ADDRESS", "GRAPH_MAILBOX"),
+        serialization_alias="GRAPH_EXPECTED_MAILBOX_ADDRESS",
     )
     graph_base_url: str = Field(default="https://graph.microsoft.com/v1.0", alias="GRAPH_BASE_URL")
     graph_tenant_id: str | None = Field(default=None, alias="GRAPH_TENANT_ID")
@@ -301,7 +330,7 @@ class Settings(BaseSettings):
     max_raw_mime_bytes: int = Field(default=26_214_400, alias="MAX_RAW_MIME_BYTES")
     max_attachment_bytes: int = Field(default=26_214_400, alias="MAX_ATTACHMENT_BYTES")
     max_attachments_per_message: int = Field(default=25, alias="MAX_ATTACHMENTS_PER_MESSAGE")
-    allowed_attachment_mime_types: list[str] = Field(
+    allowed_attachment_mime_types: StrList = Field(
         default_factory=lambda: [
             "application/pdf",
             "text/csv",
@@ -385,7 +414,7 @@ class Settings(BaseSettings):
     )
 
     document_max_bytes: int = Field(default=100 * 1024 * 1024, alias="DOCUMENT_MAX_BYTES")
-    document_allowed_mime_types: list[str] = Field(
+    document_allowed_mime_types: StrList = Field(
         default_factory=lambda: [
             "application/pdf",
             "image/png",
@@ -399,7 +428,7 @@ class Settings(BaseSettings):
         ],
         alias="DOCUMENT_ALLOWED_MIME_TYPES",
     )
-    document_allowed_extensions: list[str] = Field(
+    document_allowed_extensions: StrList = Field(
         default_factory=lambda: [
             ".pdf",
             ".png",
@@ -426,7 +455,7 @@ class Settings(BaseSettings):
         default=100 * 1024 * 1024, alias="DOCUMENT_DOWNLOAD_MAX_BYTES"
     )
     document_preview_enabled: bool = Field(default=False, alias="DOCUMENT_PREVIEW_ENABLED")
-    document_expiry_alert_days: list[int] = Field(
+    document_expiry_alert_days: IntList = Field(
         default_factory=lambda: [120, 90, 60, 30, 14, 7, 0], alias="DOCUMENT_EXPIRY_ALERT_DAYS"
     )
 
@@ -486,7 +515,7 @@ class Settings(BaseSettings):
     )
     #: Explicit allow-list of public regulator hosts. Authenticated portals
     #: (NMLS sign-in, state licensee portals) must never appear here.
-    requirement_source_allowed_hosts: list[str] = Field(
+    requirement_source_allowed_hosts: StrList = Field(
         default_factory=list, alias="REQUIREMENT_SOURCE_ALLOWED_HOSTS"
     )
     requirement_source_freshness_days: int = Field(
@@ -502,7 +531,7 @@ class Settings(BaseSettings):
     deadline_materialization_interval_seconds: int = Field(
         default=3600, alias="DEADLINE_MATERIALIZATION_INTERVAL_SECONDS"
     )
-    deadline_alert_windows_days: list[int] = Field(
+    deadline_alert_windows_days: IntList = Field(
         default_factory=lambda: [120, 90, 60, 30, 14, 7, 3, 0],
         alias="DEADLINE_ALERT_WINDOWS_DAYS",
     )
@@ -554,13 +583,92 @@ class Settings(BaseSettings):
     tracker_import_max_bytes: int = Field(
         default=25 * 1024 * 1024, alias="TRACKER_IMPORT_MAX_BYTES"
     )
-    tracker_import_allowed_extensions: list[str] = Field(
+    tracker_import_allowed_extensions: StrList = Field(
         default_factory=lambda: [".xlsx", ".csv"], alias="TRACKER_IMPORT_ALLOWED_EXTENSIONS"
     )
     tracker_import_max_rows: int = Field(default=20000, alias="TRACKER_IMPORT_MAX_ROWS")
 
+    # ------------------------------------------------ Portal assistance M7
+    portal_automation_enabled: bool = Field(default=False, alias="PORTAL_AUTOMATION_ENABLED")
+    portal_allowed_hosts: StrList = Field(default_factory=list, alias="PORTAL_ALLOWED_HOSTS")
+    portal_require_active_review: bool = Field(default=True, alias="PORTAL_REQUIRE_ACTIVE_REVIEW")
+    portal_default_automation_level: str = Field(
+        default="PREPARE_ONLY", alias="PORTAL_DEFAULT_AUTOMATION_LEVEL"
+    )
+    portal_terms_review_max_age_days: int = Field(
+        default=365, alias="PORTAL_TERMS_REVIEW_MAX_AGE_DAYS"
+    )
+
+    browser_automation_enabled: bool = Field(default=False, alias="BROWSER_AUTOMATION_ENABLED")
+    browser_type: Literal["chromium"] = Field(default="chromium", alias="BROWSER_TYPE")
+    browser_headless: bool = Field(default=True, alias="BROWSER_HEADLESS")
+    browser_worker_pool_size: int = Field(default=1, alias="BROWSER_WORKER_POOL_SIZE")
+    browser_session_max_minutes: int = Field(default=60, alias="BROWSER_SESSION_MAX_MINUTES")
+    browser_inactivity_timeout_minutes: int = Field(
+        default=15, alias="BROWSER_INACTIVITY_TIMEOUT_MINUTES"
+    )
+    browser_navigation_timeout_seconds: int = Field(
+        default=30, alias="BROWSER_NAVIGATION_TIMEOUT_SECONDS"
+    )
+    browser_action_timeout_seconds: int = Field(default=10, alias="BROWSER_ACTION_TIMEOUT_SECONDS")
+    browser_temp_root: str = Field(default="/tmp/astra-portals", alias="BROWSER_TEMP_ROOT")
+    browser_session_state_persistence: bool = Field(
+        default=False, alias="BROWSER_SESSION_STATE_PERSISTENCE"
+    )
+    browser_session_encryption_key_reference: str | None = Field(
+        default=None, alias="BROWSER_SESSION_ENCRYPTION_KEY_REFERENCE"
+    )
+    browser_screenshot_enabled: bool = Field(default=False, alias="BROWSER_SCREENSHOT_ENABLED")
+    browser_video_enabled: bool = Field(default=False, alias="BROWSER_VIDEO_ENABLED")
+    browser_remote_debugging_url: str | None = Field(
+        default=None, alias="BROWSER_REMOTE_DEBUGGING_URL"
+    )
+
+    portal_login_human_only: bool = Field(default=True, alias="PORTAL_LOGIN_HUMAN_ONLY")
+    portal_mfa_human_only: bool = Field(default=True, alias="PORTAL_MFA_HUMAN_ONLY")
+    portal_captcha_human_only: bool = Field(default=True, alias="PORTAL_CAPTCHA_HUMAN_ONLY")
+    portal_terms_acceptance_human_only: bool = Field(
+        default=True, alias="PORTAL_TERMS_ACCEPTANCE_HUMAN_ONLY"
+    )
+    portal_attestation_human_only: bool = Field(default=True, alias="PORTAL_ATTESTATION_HUMAN_ONLY")
+    portal_signature_human_only: bool = Field(default=True, alias="PORTAL_SIGNATURE_HUMAN_ONLY")
+    portal_payment_human_only: bool = Field(default=True, alias="PORTAL_PAYMENT_HUMAN_ONLY")
+    portal_final_submit_human_only: bool = Field(
+        default=True, alias="PORTAL_FINAL_SUBMIT_HUMAN_ONLY"
+    )
+    portal_captcha_solving_enabled: bool = Field(
+        default=False, alias="PORTAL_CAPTCHA_SOLVING_ENABLED"
+    )
+    portal_mfa_bypass_enabled: bool = Field(default=False, alias="PORTAL_MFA_BYPASS_ENABLED")
+
+    portal_upload_max_files: int = Field(default=50, alias="PORTAL_UPLOAD_MAX_FILES")
+    portal_upload_max_total_bytes: int = Field(
+        default=250 * 1024 * 1024, alias="PORTAL_UPLOAD_MAX_TOTAL_BYTES"
+    )
+    portal_upload_allowed_mime_types: StrList = Field(
+        default_factory=lambda: [
+            "application/pdf",
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ],
+        alias="PORTAL_UPLOAD_ALLOWED_MIME_TYPES",
+    )
+    portal_capture_screenshots: bool = Field(default=False, alias="PORTAL_CAPTURE_SCREENSHOTS")
+    portal_capture_dom_snapshots: bool = Field(default=True, alias="PORTAL_CAPTURE_DOM_SNAPSHOTS")
+    portal_capture_pre_submission_pdf: bool = Field(
+        default=False, alias="PORTAL_CAPTURE_PRE_SUBMISSION_PDF"
+    )
+    portal_evidence_redaction_enabled: bool = Field(
+        default=True, alias="PORTAL_EVIDENCE_REDACTION_ENABLED"
+    )
+    portal_job_lease_seconds: int = Field(default=120, alias="PORTAL_JOB_LEASE_SECONDS")
+    portal_worker_poll_interval_seconds: float = Field(
+        default=2.0, alias="PORTAL_WORKER_POLL_INTERVAL_SECONDS"
+    )
+
     @field_validator(
         "cors_origins",
+        "entra_allowed_algorithms",
+        "ai_allowed_data_classes",
         "allowed_attachment_mime_types",
         "document_allowed_mime_types",
         "document_allowed_extensions",
@@ -568,13 +676,29 @@ class Settings(BaseSettings):
         "requirement_source_allowed_hosts",
         "deadline_alert_windows_days",
         "tracker_import_allowed_extensions",
+        "portal_allowed_hosts",
+        "portal_upload_allowed_mime_types",
         mode="before",
     )
     @classmethod
     def _split_comma_lists(cls, value: object) -> object:
-        if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
-        return value
+        """Accept ``a,b`` and ``["a","b"]`` for every list setting.
+
+        Both forms appear in real variable sets — a JSON array is natural when
+        an entry contains a comma, a plain list is natural everywhere else — and
+        a deployment should not fail over the difference.
+        """
+        if not isinstance(value, str):
+            return value
+        text = value.strip()
+        if not text:
+            return []
+        if text.startswith("["):
+            try:
+                return json.loads(text)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"value looks like JSON but does not parse: {exc.msg}") from exc
+        return [item.strip() for item in text.split(",") if item.strip()]
 
     @field_validator("graph_base_url")
     @classmethod
@@ -739,6 +863,8 @@ class Settings(BaseSettings):
             if self.openai_store_responses:
                 problems.append("OPENAI_STORE_RESPONSES must remain false for Milestone 4")
         problems.extend(self._licensing_problems())
+        problems.extend(self._portal_problems())
+        problems.extend(self._deployment_problems())
         if problems:
             raise ValueError("; ".join(problems))
         return self
@@ -836,6 +962,89 @@ class Settings(BaseSettings):
                 "production tracker imports require governed evidence storage for the "
                 "original source file"
             )
+        return problems
+
+    def _portal_problems(self) -> list[str]:
+        """Milestone 7's human-only and session-security boundary."""
+        problems: list[str] = []
+        human_controls = {
+            "PORTAL_LOGIN_HUMAN_ONLY": self.portal_login_human_only,
+            "PORTAL_MFA_HUMAN_ONLY": self.portal_mfa_human_only,
+            "PORTAL_CAPTCHA_HUMAN_ONLY": self.portal_captcha_human_only,
+            "PORTAL_TERMS_ACCEPTANCE_HUMAN_ONLY": self.portal_terms_acceptance_human_only,
+            "PORTAL_ATTESTATION_HUMAN_ONLY": self.portal_attestation_human_only,
+            "PORTAL_SIGNATURE_HUMAN_ONLY": self.portal_signature_human_only,
+            "PORTAL_PAYMENT_HUMAN_ONLY": self.portal_payment_human_only,
+            "PORTAL_FINAL_SUBMIT_HUMAN_ONLY": self.portal_final_submit_human_only,
+        }
+        for setting, enabled in human_controls.items():
+            if not enabled:
+                problems.append(f"{setting} must remain true in Milestone 7")
+        if self.portal_captcha_solving_enabled:
+            problems.append("PORTAL_CAPTCHA_SOLVING_ENABLED must remain false")
+        if self.portal_mfa_bypass_enabled:
+            problems.append("PORTAL_MFA_BYPASS_ENABLED must remain false")
+        if self.browser_remote_debugging_url:
+            problems.append("BROWSER_REMOTE_DEBUGGING_URL is not supported")
+        if self.browser_session_state_persistence and not (
+            self.browser_session_encryption_key_reference
+        ):
+            problems.append(
+                "persistent browser state requires BROWSER_SESSION_ENCRYPTION_KEY_REFERENCE"
+            )
+        if self.portal_default_automation_level == "UNATTENDED_SUBMISSION":
+            problems.append("UNATTENDED_SUBMISSION is not a supported automation level")
+        if self.portal_upload_max_files <= 0 or self.portal_upload_max_total_bytes <= 0:
+            problems.append("portal upload limits must be positive")
+        if self.browser_worker_pool_size <= 0:
+            problems.append("BROWSER_WORKER_POOL_SIZE must be positive")
+        if self.browser_session_max_minutes <= 0 or self.browser_inactivity_timeout_minutes <= 0:
+            problems.append("browser session timeouts must be positive")
+        if self.app_env == "production":
+            if self.portal_automation_enabled and not self.portal_allowed_hosts:
+                problems.append("production portal automation requires PORTAL_ALLOWED_HOSTS")
+            if not self.portal_require_active_review:
+                problems.append("production requires PORTAL_REQUIRE_ACTIVE_REVIEW")
+            if self.auth_mode == "development":
+                problems.append(
+                    "production portal assistance cannot use development authentication"
+                )
+            if self.browser_session_state_persistence:
+                problems.append(
+                    "production browser session persistence is disabled for Milestone 7"
+                )
+        return problems
+
+    def _deployment_problems(self) -> list[str]:
+        """Milestone 8 deployment sanity checks.
+
+        A deployment must fail loudly rather than start with a half-configured
+        environment: a production API with no allowed browser origin, a public
+        URL served over plain HTTP, or a production service still pointing at a
+        developer database are all deployment mistakes, not runtime conditions.
+        """
+        problems: list[str] = []
+        deployed = self.app_env in ("staging", "production")
+
+        for name, value in (("FRONTEND_URL", self.frontend_url), ("BACKEND_URL", self.backend_url)):
+            if not value:
+                continue
+            if deployed and not value.startswith("https://"):
+                problems.append(f"{name} must use HTTPS outside local/test")
+            if deployed and _is_loopback(value):
+                problems.append(f"{name} must not point at localhost outside local/test")
+
+        if self.app_env != "production":
+            return problems
+
+        if not self.cors_origins:
+            problems.append("production requires CORS_ORIGINS containing the portal origin")
+        if self.frontend_url:
+            origin = self.frontend_url.rstrip("/")
+            if origin not in {value.rstrip("/") for value in self.cors_origins}:
+                problems.append("production CORS_ORIGINS must contain FRONTEND_URL")
+        if _is_loopback(self.database_url):
+            problems.append("production DATABASE_URL must not point at a local database")
         return problems
 
     @property

@@ -1,0 +1,28 @@
+server {
+  listen ${PORT};
+  server_name _;
+  root /usr/share/nginx/html;
+
+  # Single-page application: unknown paths are routes, not missing files.
+  location / {
+    try_files $uri /index.html;
+  }
+
+  # Hashed build assets are immutable; index.html must never be cached or a
+  # deployment would keep serving the previous bundle.
+  location /assets/ {
+    add_header Cache-Control "public, max-age=31536000, immutable";
+  }
+  location = /index.html {
+    add_header Cache-Control "no-store";
+  }
+
+  location = /healthz {
+    access_log off;
+    return 200 "ok\n";
+  }
+
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "DENY" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+}

@@ -4,7 +4,36 @@ Production backend foundation for Astra Business Services' licensing-mailbox
 automation: PostgreSQL data model, FastAPI read API, atomic email
 state-machine, and tooling to import the PowerShell prototype's data.
 
-## Current milestone boundary (Milestone 5)
+## Deployment (Milestone 8)
+
+Milestone 8 makes the system deployable and operable: Railway service
+definitions for the backend, portal, general worker, cron scheduler, browser
+worker, and PostgreSQL; separated staging and production environments;
+Alembic migrations as a pre-deploy gate; an operations status endpoint; and
+the migration, UAT, pilot, and go-live procedures.
+
+- [DEPLOYMENT.md](DEPLOYMENT.md) — Railway layout, variables, migrations,
+  backups, restore, rollback, common failures, security checklist
+- [GO_LIVE_CHECKLIST.md](GO_LIVE_CHECKLIST.md) — migration, reconciliation,
+  UAT, pilot, approvals, go-live sequence, contacts
+- [production data migration](docs/production-data-migration.md) ·
+  [UAT checklist](docs/uat-checklist.md) ·
+  [pilot checklist](docs/pilot-checklist.md) ·
+  [staging acceptance](docs/milestone8-staging-acceptance.md)
+
+```powershell
+python -m app.cli.check_deployment          # pre-deploy configuration gate
+alembic upgrade head                        # pre-deploy migration
+python -m app.cli.migration_reconcile check --expected expected-counts.json
+```
+
+Operational endpoints: `GET /health/live`, `GET /health/ready`,
+`GET /api/v1/operations/status`, `GET /metrics`.
+
+Autonomous filing is not enabled by any configuration: human review, send
+approval, and human final submission remain mandatory.
+
+## Milestone 5 boundary
 
 Milestone 5 adds controlled response plans, immutable local and Graph draft
 revisions, governed attachments, separate exact-snapshot send approval,
@@ -46,9 +75,50 @@ Milestone 5 operations: [response drafting](docs/response-drafting.md) ·
 ### Running the workers
 
 ```powershell
+# One general worker (the deployed topology): one claim loop per queue family.
+python -m app.workers.runner --queues graph,ingestion,classification,documents,communications,licensing,requirements,deadlines,packets,forms,imports
+
+# Or split them when load justifies it.
 python -m app.workers.runner --queues subscriptions,sync,ingestion
 python -m app.workers.runner --queues communications
-python -m app.workers.scheduling          # single-replica periodic scheduler
+python -m app.workers.runner --queues licensing,requirements,deadlines,packets,forms,imports
+
+python -m app.workers.scheduler --once    # cron: enqueue durable jobs and exit
+python -m app.workers.scheduling          # single-replica periodic scheduler loop
+```
+
+Milestone 6 operations: [license inventory](docs/license-inventory.md) ·
+[requirement matrix](docs/requirement-matrix.md) ·
+[case workflow](docs/compliance-case-workflow.md) ·
+[deadline engine](docs/deadline-engine.md) ·
+[information registry](docs/reusable-information-registry.md) ·
+[packet generation](docs/document-packet-generation.md) ·
+[form preparation](docs/form-preparation.md) ·
+[tracker migration](docs/master-tracker-migration.md) ·
+[operations runbook](docs/licensing-operations-runbook.md) ·
+[staging acceptance](docs/milestone6-staging-acceptance.md).
+
+Milestone 7 adds governed, human-supervised portal assistance. It uses
+versioned locator contracts, operator-bound ephemeral Playwright sessions,
+exact pre-submission snapshots, dedicated human handoffs, and evidence-gated
+case transitions. It never stores portal credentials, bypasses MFA or CAPTCHA,
+automates legal or payment actions, or submits a filing.
+
+Milestone 7 operations: [governance](docs/portal-automation-governance.md) ·
+[session security](docs/browser-session-security.md) ·
+[adapter development](docs/portal-adapter-development.md) ·
+[NMLS assisted workflow](docs/nmls-assisted-workflow.md) ·
+[human handoffs](docs/human-handoff-workflow.md) ·
+[pre-submission verification](docs/pre-submission-verification.md) ·
+[submission evidence](docs/submission-evidence.md) ·
+[operations runbook](docs/portal-operations-runbook.md) ·
+[staging acceptance](docs/milestone7-staging-acceptance.md).
+
+Run the isolated browser worker only after portal governance is configured:
+
+```powershell
+python -m app.workers.runner --queues portals
+python -m app.cli.portal_diagnostics list
 ```
 
 ### Webhook paths
@@ -234,3 +304,4 @@ The portal is at <http://127.0.0.1:5173>. Local/test synthetic actor mode is rep
 | Tests fail with `database "astra_licensing_test" does not exist` | It is auto-created; if the DB volume predates the init script, run `docker compose down -v && docker compose up -d db`. |
 | `alembic upgrade` cannot connect | Set `DATABASE_URL` in the shell or `.env`; the env var overrides `alembic.ini`. |
 | Windows: `Activate.ps1` blocked | `Set-ExecutionPolicy -Scope Process RemoteSigned` |
+| Many tests error with `PermissionError: [WinError 5] ... Temp\pytest-of-<user>` | That temp directory's permissions are broken (even reading its ACL fails). Point pytest elsewhere: `setx PYTEST_DEBUG_TEMPROOT C:\Users\<user>\pytest-temp`, then open a new shell. To delete the broken directory instead, run an **elevated** shell: `takeown /f "%TEMP%\pytest-of-%USERNAME%" /r /d y` then `rmdir /s /q "%TEMP%\pytest-of-%USERNAME%"`. |

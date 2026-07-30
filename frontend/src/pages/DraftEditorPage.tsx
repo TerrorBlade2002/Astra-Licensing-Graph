@@ -46,7 +46,7 @@ function DraftDiff({ versions }: { versions: DraftVersion[] }) {
   const [compareRevision, setCompareRevision] = useState<number>();
   useEffect(() => {
     if (!ordered.length) return;
-    setBaseRevision((value) => value ?? ordered[0].revision);
+    setBaseRevision((value) => value ?? ordered[0]!.revision);
     setCompareRevision((value) => value ?? ordered.at(-1)!.revision);
   }, [ordered]);
   const baseline =

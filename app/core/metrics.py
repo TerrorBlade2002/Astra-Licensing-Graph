@@ -350,6 +350,70 @@ LICENSING_JOBS_TOTAL = Counter(
     "licensing_jobs_total", "Licensing jobs processed", ["job_type", "outcome"], registry=REGISTRY
 )
 
+# Milestone 7 portal metrics deliberately have no portal, account, license,
+# confirmation, filename, or field-value labels.
+PORTAL_RUNS_TOTAL = Counter(
+    "portal_runs_total", "Portal assistance runs created", registry=REGISTRY
+)
+PORTAL_RUNS_ACTIVE = Gauge("portal_runs_active", "Active portal assistance runs", registry=REGISTRY)
+PORTAL_RUNS_BLOCKED = Gauge(
+    "portal_runs_blocked", "Portal runs blocked or failed review", registry=REGISTRY
+)
+PORTAL_SESSIONS_ACTIVE = Gauge(
+    "portal_sessions_active", "Active isolated browser sessions", registry=REGISTRY
+)
+PORTAL_SESSION_DURATION_SECONDS = Histogram(
+    "portal_session_duration_seconds", "Browser session duration", registry=REGISTRY
+)
+PORTAL_HANDOFFS_TOTAL = Counter(
+    "portal_handoffs_total", "Human portal handoffs requested", registry=REGISTRY
+)
+PORTAL_HANDOFF_WAIT_SECONDS = Histogram(
+    "portal_handoff_wait_seconds", "Human handoff wait time", registry=REGISTRY
+)
+PORTAL_MFA_HANDOFFS_TOTAL = Counter(
+    "portal_mfa_handoffs_total", "Human MFA handoffs", registry=REGISTRY
+)
+PORTAL_CAPTCHA_HANDOFFS_TOTAL = Counter(
+    "portal_captcha_handoffs_total", "Human CAPTCHA handoffs", registry=REGISTRY
+)
+PORTAL_FIELDS_ENTERED_TOTAL = Counter(
+    "portal_fields_entered_total", "Reviewed portal fields entered", registry=REGISTRY
+)
+PORTAL_FIELD_DISCREPANCIES_TOTAL = Counter(
+    "portal_field_discrepancies_total", "Portal field discrepancies", registry=REGISTRY
+)
+PORTAL_DOCUMENTS_UPLOADED_TOTAL = Counter(
+    "portal_documents_uploaded_total", "Approved portal documents uploaded", registry=REGISTRY
+)
+PORTAL_UPLOAD_FAILURES_TOTAL = Counter(
+    "portal_upload_failures_total", "Portal document upload failures", registry=REGISTRY
+)
+PORTAL_VALIDATION_ERRORS_TOTAL = Counter(
+    "portal_validation_errors_total", "Portal validation errors captured", registry=REGISTRY
+)
+PRE_SUBMISSION_SNAPSHOTS_TOTAL = Counter(
+    "pre_submission_snapshots_total", "Pre-submission snapshots captured", registry=REGISTRY
+)
+PRE_SUBMISSION_REJECTIONS_TOTAL = Counter(
+    "pre_submission_rejections_total", "Pre-submission snapshots rejected", registry=REGISTRY
+)
+FINAL_SUBMIT_HANDOFFS_TOTAL = Counter(
+    "final_submit_handoffs_total", "Human final-submit handoffs", registry=REGISTRY
+)
+PORTAL_SUBMISSIONS_RECORDED_TOTAL = Counter(
+    "portal_submissions_recorded_total", "Human portal submissions recorded", registry=REGISTRY
+)
+PORTAL_SUBMISSION_AMBIGUOUS_TOTAL = Counter(
+    "portal_submission_ambiguous_total", "Ambiguous human submission outcomes", registry=REGISTRY
+)
+PORTAL_ADAPTER_FAILURES_TOTAL = Counter(
+    "portal_adapter_failures_total", "Portal adapter contract failures", registry=REGISTRY
+)
+PORTAL_TERMS_REVIEWS_EXPIRING = Gauge(
+    "portal_terms_reviews_expiring", "Portal reviews expiring within 30 days", registry=REGISTRY
+)
+
 
 def render_metrics() -> bytes:
     return generate_latest(REGISTRY)

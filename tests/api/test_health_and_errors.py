@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import uuid
 
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
 
@@ -70,10 +72,13 @@ async def test_error_shape_for_validation_error(client: AsyncClient) -> None:
     assert body["error"]["details"]["errors"]
 
 
-async def test_system_version(client: AsyncClient) -> None:
+async def test_system_version(client: AsyncClient, alembic_config: Config) -> None:
     response = await client.get("/api/v1/system/version")
     assert response.status_code == 200
     body = response.json()
     assert body["app_name"]
     assert body["environment"] == "test"
-    assert body["migration_revision"] == "0005_controlled_communications"
+    # Compared against the current head rather than a hard-coded revision, so
+    # the check keeps meaning after each milestone adds a migration.
+    head = ScriptDirectory.from_config(alembic_config).get_current_head()
+    assert body["migration_revision"] == head

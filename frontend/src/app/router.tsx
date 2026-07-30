@@ -15,6 +15,27 @@ import { CommunicationStatusPage } from "../pages/CommunicationStatusPage";
 import { TaskBoardPage } from "../pages/TaskBoardPage";
 import { TaskDetailPage } from "../pages/TaskDetailPage";
 import { UnauthorizedPage } from "../pages/UnauthorizedPage";
+import { ComplianceCalendarPage } from "../pages/ComplianceCalendarPage";
+import { ComplianceCasePage } from "../pages/ComplianceCasePage";
+import { ComplianceCasesPage } from "../pages/ComplianceCasesPage";
+import { DataQualityPage } from "../pages/DataQualityPage";
+import { FormPreparationPage } from "../pages/FormPreparationPage";
+import { InformationRegistryPage } from "../pages/InformationRegistryPage";
+import { LicenseDetailPage } from "../pages/LicenseDetailPage";
+import { LicenseInventoryPage } from "../pages/LicenseInventoryPage";
+import { LicensingDashboardPage } from "../pages/LicensingDashboardPage";
+import { MasterTrackerImportPage } from "../pages/MasterTrackerImportPage";
+import { PacketBuilderPage } from "../pages/PacketBuilderPage";
+import { RequirementAssessmentPage } from "../pages/RequirementAssessmentPage";
+import { RequirementResultPage } from "../pages/RequirementResultPage";
+import { RequirementSourcesPage } from "../pages/RequirementSourcesPage";
+import { PortalDefinitionPage } from "../pages/PortalDefinitionPage";
+import { PortalHandoffPage } from "../pages/PortalHandoffPage";
+import { PortalRegistryPage } from "../pages/PortalRegistryPage";
+import { PortalRunPage } from "../pages/PortalRunPage";
+import { PortalRunQueuePage } from "../pages/PortalRunQueuePage";
+import { PreSubmissionReviewPage } from "../pages/PreSubmissionReviewPage";
+import { SubmissionEvidencePage } from "../pages/SubmissionEvidencePage";
 
 export const router = createBrowserRouter([
   {
@@ -56,6 +77,67 @@ export const router = createBrowserRouter([
         ),
       },
       { path: "communications/status", element: <CommunicationStatusPage /> },
+      { path: "licensing", element: <LicensingDashboardPage /> },
+      { path: "licensing/licenses", element: <LicenseInventoryPage /> },
+      { path: "licensing/licenses/:id", element: <LicenseDetailPage /> },
+      {
+        path: "licensing/requirements",
+        element: <RequirementAssessmentPage />,
+      },
+      {
+        path: "licensing/requirements/:id",
+        element: <RequirementResultPage />,
+      },
+      { path: "licensing/calendar", element: <ComplianceCalendarPage /> },
+      { path: "licensing/cases", element: <ComplianceCasesPage /> },
+      { path: "licensing/cases/:id", element: <ComplianceCasePage /> },
+      { path: "licensing/information", element: <InformationRegistryPage /> },
+      { path: "licensing/packets", element: <PacketBuilderPage /> },
+      { path: "licensing/forms", element: <FormPreparationPage /> },
+      { path: "portals", element: <PortalRegistryPage /> },
+      { path: "portals/:id", element: <PortalDefinitionPage /> },
+      { path: "portal-runs", element: <PortalRunQueuePage /> },
+      { path: "portal-runs/:id", element: <PortalRunPage /> },
+      {
+        path: "portal-handoffs/:id",
+        element: <PortalHandoffPage />,
+      },
+      {
+        path: "pre-submission-snapshots/:id",
+        element: (
+          <RoleGuard role="Licensing.Reviewer">
+            <PreSubmissionReviewPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: "portal-runs/:id/submission-evidence",
+        element: <SubmissionEvidencePage />,
+      },
+      {
+        path: "licensing/sources",
+        element: (
+          <RoleGuard role="Licensing.Manager">
+            <RequirementSourcesPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: "licensing/import",
+        element: (
+          <RoleGuard role="Licensing.Admin">
+            <MasterTrackerImportPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: "licensing/data-quality",
+        element: (
+          <RoleGuard role="Licensing.Manager">
+            <DataQualityPage />
+          </RoleGuard>
+        ),
+      },
       { path: "admin/rules", element: <AdminRulesPage /> },
       { path: "evaluation", element: <EvaluationPage /> },
       { path: "unauthorized", element: <UnauthorizedPage /> },

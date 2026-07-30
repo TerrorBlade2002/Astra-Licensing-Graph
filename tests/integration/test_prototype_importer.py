@@ -74,7 +74,9 @@ async def test_normal_single_record_import(
     assert task.status == "COMPLETED" and task.draft_status == "SENT"
 
     draft = await session.scalar(select(OutboundDraft))
-    assert draft is not None and draft.status == "SENT"
+    # The prototype's "SENT" maps onto the Milestone 5 draft lifecycle, where a
+    # sent message is only final once its Sent Items copy is verified.
+    assert draft is not None and draft.status == "SENT_COPY_VERIFIED"
 
 
 @pytest.mark.parametrize("wrapper", ["single", "array", "nested", "wrapper"])

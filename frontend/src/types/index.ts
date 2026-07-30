@@ -325,3 +325,264 @@ export type CommunicationTemplate = {
   is_active: boolean;
   active_version_id: string | null;
 };
+
+export type LegalEntity = {
+  id: string;
+  entity_key: string;
+  legal_name: string;
+  display_name: string | null;
+  status: string;
+  is_in_scope: boolean;
+};
+
+export type LicenseRecord = {
+  id: string;
+  license_key: string;
+  legal_entity_id: string;
+  jurisdiction_id: string;
+  license_type_id: string;
+  license_number: string | null;
+  nmls_license_id: string | null;
+  filing_channel: string;
+  current_status: string;
+  expiration_date: string | null;
+  renewal_due_date: string | null;
+  responsible_owner: string | null;
+  source_confidence: string;
+};
+
+export type RequirementAssessment = {
+  id: string;
+  assessment_key: string;
+  legal_entity_id: string;
+  operating_profile_id: string;
+  status: string;
+  requested_jurisdictions: string[];
+  created_at: string;
+};
+
+export type RequirementResult = {
+  id: string;
+  jurisdiction_id: string;
+  outcome: string;
+  filing_channels: string[];
+  explanation: string;
+  facts_used: Record<string, unknown>;
+  missing_facts: unknown[];
+  matched_rule_ids: string[];
+  source_citations: Array<Record<string, unknown>>;
+  source_freshness_status: string;
+  requires_human_review: boolean;
+  requires_counsel_review: boolean;
+  reviewed_outcome: string | null;
+};
+
+export type ComplianceCase = {
+  id: string;
+  case_key: string;
+  obligation_id: string;
+  legal_entity_id: string;
+  case_type: string;
+  current_stage: string;
+  status: string;
+  priority: string;
+  statutory_due_date: string | null;
+  internal_target_date: string | null;
+  assigned_owner: string | null;
+  blocked_reason: string | null;
+};
+
+export type CalendarEntry = {
+  deadline_id: string;
+  obligation_id: string;
+  compliance_case_id: string | null;
+  legal_entity_id: string;
+  jurisdiction_id: string | null;
+  obligation_type: string;
+  title: string;
+  deadline_type: string;
+  due_at: string;
+  internal_target_at: string | null;
+  status: string;
+  severity: string;
+  assigned_owner: string | null;
+  escalation_level: string | null;
+  is_statutory: boolean;
+};
+
+export type InformationValue = {
+  id: string;
+  information_definition_id: string;
+  legal_entity_id: string | null;
+  value_version: number;
+  display_value_redacted: string | null;
+  status: string;
+  valid_to: string | null;
+  owner_actor: string | null;
+  last_used_at: string | null;
+};
+
+export type DashboardSummary = {
+  licenses_total: number;
+  licenses_active: number;
+  licenses_expiring: Record<string, number>;
+  obligations_overdue: number;
+  cases_open: number;
+  cases_blocked: number;
+  cases_overdue: number;
+  cases_by_stage: Record<string, number>;
+  information_requests_open: number;
+  information_values_stale: number;
+  forms_waiting_signature: number;
+  forms_waiting_information: number;
+  packets_missing_items: number;
+  sources_stale: number;
+  source_changes_pending: number;
+  assessments_counsel_review: number;
+  advisory_notice: string;
+};
+
+export type PortalDefinition = {
+  id: string;
+  portal_key: string;
+  name: string;
+  portal_type: string;
+  base_url: string;
+  hostname: string;
+  jurisdiction_id: string | null;
+  supported_filing_types: string[];
+  approved_automation_level: string;
+  status: string;
+  credential_model: string;
+  mfa_model: string | null;
+  captcha_expected: boolean;
+  terms_review_required: boolean;
+  terms_review_expires_at: string | null;
+  final_submit_human_only: boolean;
+  payment_human_only: boolean;
+  attestation_human_only: boolean;
+  signature_human_only: boolean;
+  last_verified_at: string | null;
+};
+
+export type PortalRun = {
+  id: string;
+  run_key: string;
+  portal_definition_id: string;
+  compliance_case_id: string;
+  legal_entity_id: string;
+  license_id: string | null;
+  form_instance_id: string | null;
+  document_packet_id: string | null;
+  filing_type: string;
+  automation_level: string;
+  status: string;
+  current_stage: string;
+  assigned_operator_id: string | null;
+  assigned_signatory_id: string | null;
+  assigned_payment_approver_id: string | null;
+  deadline_at: string | null;
+  last_error_code: string | null;
+  last_error_message: string | null;
+};
+
+export type PortalBrowserSession = {
+  id: string;
+  portal_run_id: string;
+  operator_user_id: string;
+  session_status: string;
+  browser_type: string;
+  started_at: string;
+  last_activity_at: string;
+  expires_at: string;
+  closed_at: string | null;
+  close_reason: string | null;
+};
+
+export type PortalHandoff = {
+  id: string;
+  portal_run_id: string;
+  browser_session_id: string | null;
+  handoff_type: string;
+  status: string;
+  requested_from_user_id: string | null;
+  requested_at: string;
+  accepted_at: string | null;
+  completed_at: string | null;
+  result: string | null;
+  operator_confirmation: string | null;
+  evidence_reference: string | null;
+  expires_at: string | null;
+};
+
+export type PortalRunField = {
+  id: string;
+  portal_field_key: string;
+  label: string | null;
+  approved_source_type: string | null;
+  displayed_value_redacted: string | null;
+  status: string;
+  discrepancy_code: string | null;
+};
+
+export type PortalRunDocument = {
+  id: string;
+  document_id: string;
+  document_version_id: string;
+  expected_filename: string;
+  expected_sha256: string;
+  portal_document_category: string | null;
+  status: string;
+  portal_display_name: string | null;
+  portal_size_bytes: number | null;
+};
+
+export type PreSubmissionSnapshot = {
+  id: string;
+  portal_run_id: string;
+  version: number;
+  field_manifest: Array<Record<string, unknown>>;
+  document_manifest: Array<Record<string, unknown>>;
+  portal_validation_messages: Array<Record<string, unknown>>;
+  discrepancy_report: Array<Record<string, unknown>>;
+  snapshot_sha256: string;
+  status: string;
+  created_by_actor: string | null;
+  reviewed_by_actor: string | null;
+  reviewed_at: string | null;
+};
+
+export type PortalPayment = {
+  id: string;
+  status: string;
+  expected_fee_amount: string | null;
+  currency: string | null;
+  portal_fee_summary: Record<string, unknown> | null;
+  payment_reference_redacted: string | null;
+  receipt_document_id: string | null;
+};
+
+export type PortalAttestation = {
+  id: string;
+  portal_run_id: string;
+  attestation_type: string;
+  required_actor_id: string | null;
+  status: string;
+  attestation_text_fingerprint: string | null;
+  displayed_text_reference: string | null;
+  completed_by_actor: string | null;
+  completed_at: string | null;
+  evidence_reference: string | null;
+};
+
+export type PortalSubmissionEvidence = {
+  id: string;
+  evidence_type: string;
+  confirmation_number: string | null;
+  filing_reference: string | null;
+  submission_status: string | null;
+  submitted_by_actor: string | null;
+  submitted_at: string | null;
+  source_document_id: string | null;
+  verified_at: string | null;
+};

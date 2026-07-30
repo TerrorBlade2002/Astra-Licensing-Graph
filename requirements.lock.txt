@@ -32,11 +32,13 @@ packaging==26.2
 pathspec==1.1.1
 pillow==12.3.0
 pluggy==1.6.0
+playwright==1.55.0
 prometheus_client==0.25.0
 pycparser==3.0
 pydantic-settings==2.14.2
 pydantic==2.13.4
 pydantic_core==2.46.4
+pyee==13.0.1
 Pygments==2.20.0
 PyJWT==2.13.0
 pypdf==6.14.2

@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { CommunicationStatusPage } from "../pages/CommunicationStatusPage";
 import { SendApprovalQueuePage } from "../pages/SendApprovalQueuePage";
 
@@ -28,10 +29,13 @@ const draft = {
 };
 
 function wrapper(children: React.ReactNode) {
+  // The status page links to individual drafts, so it needs a router context.
   return (
-    <QueryClientProvider client={new QueryClient()}>
-      {children}
-    </QueryClientProvider>
+    <MemoryRouter>
+      <QueryClientProvider client={new QueryClient()}>
+        {children}
+      </QueryClientProvider>
+    </MemoryRouter>
   );
 }
 

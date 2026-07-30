@@ -5,16 +5,26 @@ import type { Actor } from "../types";
 
 const hierarchy = [
   "Licensing.Reader",
+  "Licensing.Analyst",
   "Licensing.Reviewer",
   "Licensing.Manager",
   "Licensing.Admin",
 ];
+const standalone = new Set([
+  "Licensing.Counsel",
+  "Information.Owner",
+  "Authorized.Signatory",
+  "Portal.Operator",
+  "Payment.Approver",
+  "Portal.FinalSubmitter",
+]);
 function allowedForRole(actual: string[], requiredRole: string) {
   if (requiredRole === "Licensing.Sender")
     return (
       actual.includes("Licensing.Sender") ||
       actual.includes("Licensing.Manager")
     );
+  if (standalone.has(requiredRole)) return actual.includes(requiredRole);
   const required = hierarchy.indexOf(requiredRole);
   return (
     required >= 0 && actual.some((role) => hierarchy.indexOf(role) >= required)

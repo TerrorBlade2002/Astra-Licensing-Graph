@@ -102,7 +102,15 @@ class DocumentUploadService:
         )
         sha256 = await _hash_file(source)
         duplicate = await self.repo.find_exact_hash(sha256)
-        if duplicate is not None:
+        same_governed_scope = bool(
+            duplicate is not None
+            and duplicate.document_type == metadata.document_type
+            and duplicate.legal_entity == metadata.legal_entity
+            and duplicate.jurisdiction == metadata.jurisdiction
+            and duplicate.license_type == metadata.license_type
+            and duplicate.confidentiality_level == metadata.confidentiality_level
+        )
+        if duplicate is not None and same_governed_scope:
             self._add_links(duplicate.id, links or [], actor_id)
             self.repo.add_event(
                 duplicate.id,

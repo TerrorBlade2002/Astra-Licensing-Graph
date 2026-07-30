@@ -9,19 +9,35 @@ from app.api.v1 import (
     audit,
     classification_reviews,
     communications,
+    compliance_cases,
     dashboard,
+    deadlines,
     document_operations,
+    document_packets,
     documents,
     emails,
+    form_preparation,
     graph_jobs,
     graph_status,
     graph_subscriptions,
+    information_registry,
+    legal_entities,
+    license_inventory,
+    licensing_admin,
+    licensing_dashboard,
     mailboxes,
+    operations,
     portal_auth,
+    portal_definitions,
+    portal_runs,
     portal_tasks,
+    requirement_matrix,
+    requirement_sources,
     sharepoint_status,
+    submission_evidence,
     tasks,
     taxonomy,
+    tracker_imports,
 )
 from app.schemas.event import SystemVersionOut
 
@@ -42,6 +58,22 @@ api_router.include_router(classification_reviews.router)
 api_router.include_router(communications.router)
 api_router.include_router(portal_tasks.router)
 api_router.include_router(taxonomy.router)
+api_router.include_router(legal_entities.router)
+api_router.include_router(license_inventory.router)
+api_router.include_router(requirement_matrix.router)
+api_router.include_router(requirement_sources.router)
+api_router.include_router(compliance_cases.router)
+api_router.include_router(deadlines.router)
+api_router.include_router(information_registry.router)
+api_router.include_router(document_packets.router)
+api_router.include_router(form_preparation.router)
+api_router.include_router(tracker_imports.router)
+api_router.include_router(licensing_dashboard.router)
+api_router.include_router(licensing_admin.router)
+api_router.include_router(portal_definitions.router)
+api_router.include_router(portal_runs.router)
+api_router.include_router(submission_evidence.router)
+api_router.include_router(operations.router)
 
 system_router = APIRouter(prefix="/system", tags=["system"])
 

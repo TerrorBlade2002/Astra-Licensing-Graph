@@ -13,7 +13,7 @@ from __future__ import annotations
 import hashlib
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time, timedelta, tzinfo
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.deadlines.business_days import DEFAULT_CALENDAR, BusinessCalendar
@@ -32,7 +32,7 @@ from app.deadlines.rules import DeadlinePolicy
 DEFAULT_DUE_HOUR = 17
 
 
-def _zone(timezone_name: str | None) -> ZoneInfo | UTC.__class__:  # type: ignore[valid-type]
+def _zone(timezone_name: str | None) -> tzinfo:
     if not timezone_name:
         return UTC
     try:

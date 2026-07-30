@@ -35,6 +35,10 @@ def run_migrations_offline() -> None:
         dialect_opts={"paramstyle": "named"},
         compare_type=True,
         compare_server_default=True,
+        # Alembic's default version column holds 32 characters, which a
+        # descriptive revision id can exceed — and the failure only appears at
+        # the end of a migration run, on a fresh database.
+        version_table_column_length=64,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -46,6 +50,10 @@ def do_run_migrations(connection: Connection) -> None:
         target_metadata=target_metadata,
         compare_type=True,
         compare_server_default=True,
+        # Alembic's default version column holds 32 characters, which a
+        # descriptive revision id can exceed — and the failure only appears at
+        # the end of a migration run, on a fresh database.
+        version_table_column_length=64,
     )
     with context.begin_transaction():
         context.run_migrations()

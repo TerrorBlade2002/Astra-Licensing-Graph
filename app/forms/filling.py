@@ -205,8 +205,8 @@ def fill_docx(template: bytes, values: list[FieldValue]) -> FillResult:
             if token in replacements:
                 if token in key_by_token:
                     filled.add(key_by_token[token])
-                return replacements[token]
-            return match.group(0)
+                return str(replacements[token])
+            return str(match.group(0))
 
         return PLACEHOLDER_PATTERN.sub(replace, text)
 

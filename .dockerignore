@@ -1,0 +1,29 @@
+# Keep deployment images small and free of local state.
+.git
+.github
+.venv
+.mypy_cache
+.ruff_cache
+.pytest_cache
+.coverage
+htmlcov
+**/__pycache__
+**/*.pyc
+*.egg-info
+
+frontend/node_modules
+frontend/dist
+frontend/coverage
+frontend/playwright-report
+frontend/test-results
+
+# Local runtime data: mail content, evidence, and prototype exports never
+# belong in a deployed image.
+prototype-data
+attachments
+evidence
+*.log
+
+.env
+.env.*
+!.env.example

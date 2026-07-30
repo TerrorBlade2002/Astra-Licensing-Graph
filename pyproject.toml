@@ -36,6 +36,9 @@ dependencies = [
     "openpyxl>=3.1,<4",
     # Envelope encryption for sensitive registry values (AES-256-GCM).
     "cryptography>=43,<50",
+    # Milestone 7 uses reviewed, human-supervised browser adapters. Chromium is
+    # installed only in the isolated browser-worker image.
+    "playwright==1.55.0",
 ]
 
 [project.optional-dependencies]
@@ -91,7 +94,7 @@ show_error_codes = true
 exclude = ["prototype-data", "attachments", "\\.venv"]
 
 [[tool.mypy.overrides]]
-module = ["asyncpg.*", "msal.*"]
+module = ["asyncpg.*", "msal.*", "openpyxl.*", "reportlab.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

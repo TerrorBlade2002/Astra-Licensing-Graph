@@ -24,6 +24,7 @@ services:
       APP_ENV: local
       DATABASE_URL: postgresql+asyncpg://astra:astra_local_dev@db:5432/astra_licensing
       LOG_FORMAT: json
+      CORS_ORIGINS: http://localhost:5173
     ports:
       - "8000:8000"
     depends_on:
@@ -35,8 +36,67 @@ services:
       timeout: 5s
       retries: 5
 
+  # One general worker, matching the deployed topology.
+  worker:
+    build: .
+    command:
+      [
+        "python",
+        "-m",
+        "app.workers.runner",
+        "--queues",
+        "graph,ingestion,classification,documents,communications,licensing,requirements,deadlines,packets,forms,imports",
+      ]
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+asyncpg://astra:astra_local_dev@db:5432/astra_licensing
+      LOG_FORMAT: json
+    depends_on:
+      db:
+        condition: service_healthy
+
+  scheduler:
+    build: .
+    command: ["python", "-m", "app.workers.scheduling"]
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+asyncpg://astra:astra_local_dev@db:5432/astra_licensing
+      LOG_FORMAT: json
+    depends_on:
+      db:
+        condition: service_healthy
+
+  browser-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.browser
+    environment:
+      APP_ENV: local
+      DATABASE_URL: postgresql+asyncpg://astra:astra_local_dev@db:5432/astra_licensing
+      LOG_FORMAT: json
+      PORTAL_AUTOMATION_ENABLED: "false"
+      BROWSER_AUTOMATION_ENABLED: "false"
+      BROWSER_SESSION_STATE_PERSISTENCE: "false"
+      BROWSER_REMOTE_DEBUGGING_URL: ""
+    tmpfs:
+      - /tmp/astra-portals:rw,noexec,nosuid,nodev,mode=0700,uid=1000,gid=1000
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    depends_on:
+      db:
+        condition: service_healthy
+
   portal:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # The portal calls the API by absolute URL, exactly as it does on
+        # Railway; nginx serves static files only.
+        VITE_API_BASE_URL: http://localhost:8000/api/v1
+        VITE_APP_ENV: local
     ports:
       - "5173:80"
     depends_on:

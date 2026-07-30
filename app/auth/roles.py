@@ -13,6 +13,9 @@ class Role(StrEnum):
     COUNSEL = "Licensing.Counsel"
     INFORMATION_OWNER = "Information.Owner"
     AUTHORIZED_SIGNATORY = "Authorized.Signatory"
+    PORTAL_OPERATOR = "Portal.Operator"
+    PAYMENT_APPROVER = "Payment.Approver"
+    FINAL_SUBMITTER = "Portal.FinalSubmitter"
 
 
 #: Linear seniority ladder: Reader < Analyst < Reviewer < Manager < Admin.
@@ -28,7 +31,15 @@ _LEVEL = {
 #: implied by Admin: administering taxonomies does not make someone counsel, a
 #: data steward, or an authorized signer.
 _STANDALONE_ROLES = frozenset(
-    {Role.SENDER, Role.COUNSEL, Role.INFORMATION_OWNER, Role.AUTHORIZED_SIGNATORY}
+    {
+        Role.SENDER,
+        Role.COUNSEL,
+        Role.INFORMATION_OWNER,
+        Role.AUTHORIZED_SIGNATORY,
+        Role.PORTAL_OPERATOR,
+        Role.PAYMENT_APPROVER,
+        Role.FINAL_SUBMITTER,
+    }
 )
 
 

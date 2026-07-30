@@ -25,8 +25,29 @@ from app.jobs.enums import JobType
 from app.jobs.leasing import release_scheduler_lock, try_acquire_scheduler_lock
 from app.jobs.repository import GraphJobRepository
 from app.jobs.service import GraphJobService
-from app.models import GraphSubscription, MailboxSyncState
+from app.licensing.jobs import LicensingJobType
+from app.models import (
+    BrowserSession,
+    GraphSubscription,
+    MailboxSyncState,
+    PortalDefinition,
+    PortalReviewVersion,
+    PortalRun,
+    PortalUserAuthorization,
+)
 from app.models.mixins import utcnow
+from app.portals.enums import (
+    ACTIVE_BROWSER_SESSION_STATUSES,
+    AuthorizationStatus,
+    BrowserSessionStatus,
+    PortalApprovalStatus,
+    PortalJobType,
+    PortalReviewStatus,
+    PortalRunStatus,
+)
+from app.repositories.document_jobs import DocumentJobRepository
+from app.repositories.licensing_jobs import LicensingJobRepository
+from app.repositories.portal_jobs import PortalJobRepository
 from app.workers.context import WorkerContext
 from app.workers.heartbeat import beat
 
@@ -35,7 +56,18 @@ logger = logging.getLogger(__name__)
 
 async def run_scheduler_cycle(ctx: WorkerContext) -> dict[str, int]:
     """One maintenance pass; safe to call repeatedly."""
-    counts = {"subscription_jobs": 0, "sync_jobs": 0, "recovered_leases": 0}
+    counts = {
+        "subscription_jobs": 0,
+        "sync_jobs": 0,
+        "licensing_jobs": 0,
+        "recovered_leases": 0,
+        "recovered_licensing_leases": 0,
+        "recovered_document_leases": 0,
+        "recovered_portal_leases": 0,
+        "expired_portal_reviews": 0,
+        "expired_portal_authorizations": 0,
+        "expired_browser_sessions": 0,
+    }
     settings = ctx.settings
     async with ctx.session_factory() as session:
         await beat(session, worker_id=f"{ctx.worker_id}-scheduler", worker_type="scheduler")
@@ -87,11 +119,121 @@ async def run_scheduler_cycle(ctx: WorkerContext) -> dict[str, int]:
             )
             if result.created:
                 counts["sync_jobs"] += 1
+
+        # 3. Durable licensing housekeeping. Time-bucketed idempotency keys make
+        # repeated scheduler cycles harmless while still allowing the next
+        # configured interval to enqueue fresh work.
+        licensing_jobs = LicensingJobRepository(session)
+        now = utcnow()
+        deadline_interval = max(60, settings.deadline_materialization_interval_seconds)
+        deadline_bucket = int(now.timestamp()) // deadline_interval
+        daily_bucket = now.date().isoformat()
+        scheduled = (
+            (
+                LicensingJobType.MATERIALIZE_DEADLINES,
+                f"scheduled:materialize-deadlines:{deadline_bucket}",
+            ),
+            (
+                LicensingJobType.CHECK_LICENSE_RENEWALS,
+                f"scheduled:check-license-renewals:{deadline_bucket}",
+            ),
+            (
+                LicensingJobType.CHECK_INFORMATION_FRESHNESS,
+                f"scheduled:check-information-freshness:{daily_bucket}",
+            ),
+            (
+                LicensingJobType.CHECK_DOCUMENT_EXPIRY,
+                f"scheduled:check-document-expiry:{daily_bucket}",
+            ),
+        )
+        for job_type, idempotency_key in scheduled:
+            _job, created = await licensing_jobs.enqueue(
+                job_type=job_type,
+                idempotency_key=idempotency_key,
+                payload={"requested_by_actor": "licensing-scheduler"},
+            )
+            if created:
+                counts["licensing_jobs"] += 1
         await session.commit()
 
-        # 3. Recover abandoned job leases.
+        # 4. Recover abandoned job leases.
         repo = GraphJobRepository(session)
         counts["recovered_leases"] = await repo.recover_expired_leases()
+        counts["recovered_licensing_leases"] = await licensing_jobs.recover_expired_leases()
+        counts["recovered_document_leases"] = await DocumentJobRepository(
+            session
+        ).recover_expired_leases()
+
+        # 5. Portal reviews, authorizations, and sessions fail closed on expiry.
+        portal_jobs = PortalJobRepository(session)
+        reviews = list(
+            await session.scalars(
+                select(PortalReviewVersion).where(
+                    PortalReviewVersion.status == PortalReviewStatus.APPROVED.value,
+                    PortalReviewVersion.valid_to.is_not(None),
+                    PortalReviewVersion.valid_to <= now,
+                )
+            )
+        )
+        for review in reviews:
+            review.status = PortalReviewStatus.EXPIRED.value
+            portal = await session.get(PortalDefinition, review.portal_definition_id)
+            if portal:
+                portal.status = PortalApprovalStatus.EXPIRED.value
+            runs = list(
+                await session.scalars(
+                    select(PortalRun).where(
+                        PortalRun.portal_review_version_id == review.id,
+                        PortalRun.status.not_in(
+                            (
+                                PortalRunStatus.SUBMITTED.value,
+                                PortalRunStatus.COMPLETED.value,
+                                PortalRunStatus.CANCELLED.value,
+                            )
+                        ),
+                    )
+                )
+            )
+            for run in runs:
+                run.status = PortalRunStatus.FAILED_REVIEW.value
+                run.current_stage = run.status
+                run.last_error_code = "portal_review_expired"
+            counts["expired_portal_reviews"] += 1
+        authorizations = list(
+            await session.scalars(
+                select(PortalUserAuthorization).where(
+                    PortalUserAuthorization.authorization_status
+                    == AuthorizationStatus.ACTIVE.value,
+                    PortalUserAuthorization.expires_at.is_not(None),
+                    PortalUserAuthorization.expires_at <= now,
+                )
+            )
+        )
+        for authorization in authorizations:
+            authorization.authorization_status = AuthorizationStatus.EXPIRED.value
+            counts["expired_portal_authorizations"] += 1
+        browser_sessions = list(
+            await session.scalars(
+                select(BrowserSession).where(
+                    BrowserSession.session_status.in_(ACTIVE_BROWSER_SESSION_STATUSES),
+                    BrowserSession.expires_at <= now,
+                )
+            )
+        )
+        for browser_session in browser_sessions:
+            browser_session.session_status = BrowserSessionStatus.EXPIRED.value
+            browser_session.encrypted_session_reference = None
+            await portal_jobs.enqueue(
+                job_type=PortalJobType.CLOSE_BROWSER_SESSION,
+                idempotency_key=f"portal-close:{browser_session.id}",
+                portal_run_id=browser_session.portal_run_id,
+                browser_session_id=browser_session.id,
+                payload={"reason": "Scheduled expiry"},
+                max_attempts=3,
+            )
+            counts["expired_browser_sessions"] += 1
+        await session.commit()
+        counts["recovered_portal_leases"] = await portal_jobs.recover_expired_leases()
 
     return counts
 

@@ -147,15 +147,16 @@ class GraphDraftService:
         source = await self.client.get(mailbox_identity, source_message_id)
         if not source.get("id") or source.get("isDraft") is True:
             raise StateConflictError("Source message is missing or is itself a draft.")
-        draft = await self.session.scalar(
+        locked_draft = await self.session.scalar(
             select(OutboundDraft).where(OutboundDraft.id == draft_id).with_for_update()
         )
-        if draft is None or draft.response_plan_id is None:
+        if locked_draft is None or locked_draft.response_plan_id is None:
             raise NotFoundError("Controlled draft does not exist.")
-        plan = await self.session.get(ResponsePlan, draft.response_plan_id)
-        mailbox = await self.session.get(Mailbox, draft.mailbox_id)
-        if plan is None or mailbox is None:
+        locked_plan = await self.session.get(ResponsePlan, locked_draft.response_plan_id)
+        locked_mailbox = await self.session.get(Mailbox, locked_draft.mailbox_id)
+        if locked_plan is None or locked_mailbox is None:
             raise NotFoundError("Draft source context is incomplete.")
+        draft, plan, mailbox = locked_draft, locked_plan, locked_mailbox
         mailbox_identity = mailbox.graph_user_id or mailbox.address
         if draft.graph_draft_message_id:
             await self.session.commit()
@@ -395,12 +396,12 @@ class GraphDraftService:
             mailbox.graph_user_id or mailbox.address, email.conversation_id
         )
         intent_window = draft.updated_at - timedelta(minutes=2)
-        candidates = [
-            candidate
-            for candidate in candidates
-            if self._candidate_created_at(candidate) is not None
-            and self._candidate_created_at(candidate) >= intent_window
-        ]
+        recent_candidates = []
+        for candidate in candidates:
+            created_at = self._candidate_created_at(candidate)
+            if created_at is not None and created_at >= intent_window:
+                recent_candidates.append(candidate)
+        candidates = recent_candidates
         if len(candidates) != 1:
             raise StateConflictError(
                 "Graph draft creation remains ambiguous; exactly one candidate was not found."

@@ -34,19 +34,24 @@ PLACEHOLDER_PATTERN = re.compile(r"\{\{\s*([a-zA-Z0-9_.\-]{1,80})\s*\}\}")
 _SIGNATURE_HINTS = ("signature", "sign here", "signed by", "/sig", "esign")
 _INITIALS_HINTS = ("initial",)
 _ATTESTATION_HINTS = ("attest", "certif", "under penalty", "declare", "affirm")
-#: Fragments implying sensitive content, used to default a field's sensitivity up.
-_SENSITIVE_HINTS = (
+#: Government and financial identifiers. These are always stored encrypted,
+#: always masked, and never exposed to a model provider, so a field that looks
+#: like one is classified at the highest level rather than merely restricted.
+_HIGHLY_RESTRICTED_HINTS = (
     "ssn",
     "social security",
     "ein",
     "tax id",
     "taxpayer",
-    "date of birth",
-    "dob",
     "account number",
     "routing",
     "passport",
     "driver",
+)
+#: Other personal data that must not be reused casually but is not an identifier.
+_SENSITIVE_HINTS = (
+    "date of birth",
+    "dob",
     "license number of individual",
 )
 
@@ -160,8 +165,16 @@ def classify_field_type(name: str, native_type: str | None = None) -> str:
 
 
 def infer_sensitivity(name: str, label: str = "") -> str:
-    """Default a field's sensitivity upward when its name suggests personal data."""
-    haystack = f"{name} {label}".lower()
+    """Default a field's sensitivity upward when its name suggests personal data.
+
+    Field names arrive as ``social_security_number`` or ``tax-id`` as often as
+    they do with spaces, so separators are normalized before matching: an
+    identifier that slipped through as INTERNAL would be neither encrypted nor
+    masked.
+    """
+    haystack = re.sub(r"[_\-.]+", " ", f"{name} {label}".lower())
+    if any(hint in haystack for hint in _HIGHLY_RESTRICTED_HINTS):
+        return Sensitivity.HIGHLY_RESTRICTED.value
     if any(hint in haystack for hint in _SENSITIVE_HINTS):
         return Sensitivity.RESTRICTED.value
     if any(token in haystack for token in ("officer", "owner", "control person", "address")):
