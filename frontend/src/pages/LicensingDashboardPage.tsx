@@ -2,7 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "../api/client";
 import { ErrorState, Loading, Status } from "../components/common/States";
-import type { ComplianceCase, DashboardSummary } from "../types";
+import type {
+  ComplianceCase,
+  CurrentTracker,
+  DashboardSummary,
+} from "../types";
 
 export function LicensingDashboardPage() {
   const summary = useQuery({
@@ -15,6 +19,11 @@ export function LicensingDashboardPage() {
       api<Array<ComplianceCase & { stage: string }>>(
         "/licensing-dashboard/blocked-cases",
       ),
+  });
+  const tracker = useQuery({
+    queryKey: ["current-tracker"],
+    queryFn: () =>
+      api<CurrentTracker>("/licensing-dashboard/current-tracker?window=ALL"),
   });
   if (summary.isLoading) return <Loading />;
   if (summary.error) return <ErrorState error={summary.error} />;
@@ -54,6 +63,26 @@ export function LicensingDashboardPage() {
           <span>Waiting signature</span>
         </div>
       </section>
+      {tracker.data?.summary && (
+        <section className="panel tracker-overview-card">
+          <div>
+            <span className="eyebrow">
+              Main License Book · current snapshot
+            </span>
+            <h2>
+              Renewals and filing dates now reflect the maintained tracker
+            </h2>
+            <p>
+              {tracker.data.summary.due_next_90} items are due in the next 3
+              months; {tracker.data.summary.non_licensed} current records are
+              separately classified as non-licensed.
+            </p>
+          </div>
+          <Link className="primary button" to="/licensing/tracker">
+            Open current tracker
+          </Link>
+        </section>
+      )}
       <div className="split">
         <section className="panel">
           <div className="panel-title">

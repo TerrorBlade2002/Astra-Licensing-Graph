@@ -1006,6 +1006,60 @@ class DashboardSummaryOut(BaseModel):
     )
 
 
+class CurrentTrackerWindowOut(BaseModel):
+    value: str
+    label: str
+
+
+class CurrentTrackerSummaryOut(BaseModel):
+    events_total: int
+    due_next_30: int
+    due_next_90: int
+    due_this_year: int
+    overdue: int
+    non_licensed: int
+    tracked_jurisdictions: int
+
+
+class CurrentTrackerEventOut(BaseModel):
+    event_id: str
+    state: str
+    abbreviation: str | None
+    jurisdiction_type: str | None
+    tracker_status: str | None
+    item_type: str
+    item_name: str
+    due_date: date
+    agency: str | None
+    owner: str | None
+    notes: str | None
+    source_row: int
+    source_cell: str
+    days_remaining: int
+    timing_status: str
+
+
+class NonLicensedTrackerStateOut(BaseModel):
+    record_id: str
+    state: str
+    abbreviation: str | None
+    jurisdiction_type: str | None
+    nmls: str | None
+    reason: str | None
+    comments: str | None
+    source_row: int
+
+
+class CurrentTrackerOut(BaseModel):
+    metadata: dict[str, Any]
+    as_of: date
+    selected_window: str
+    available_windows: list[CurrentTrackerWindowOut]
+    summary: CurrentTrackerSummaryOut
+    events: list[CurrentTrackerEventOut]
+    non_licensed: list[NonLicensedTrackerStateOut]
+
+
 class DataQualityFinding(BaseModel):
     code: str
     severity: Literal["INFO", "WARNING", "ERROR"]

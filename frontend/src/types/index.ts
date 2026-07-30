@@ -442,6 +442,60 @@ export type DashboardSummary = {
   advisory_notice: string;
 };
 
+export type CurrentTrackerEvent = {
+  event_id: string;
+  state: string;
+  abbreviation: string | null;
+  jurisdiction_type: string | null;
+  tracker_status: string | null;
+  item_type: string;
+  item_name: string;
+  due_date: string;
+  agency: string | null;
+  owner: string | null;
+  notes: string | null;
+  source_row: number;
+  source_cell: string;
+  days_remaining: number;
+  timing_status: string;
+};
+
+export type NonLicensedTrackerState = {
+  record_id: string;
+  state: string;
+  abbreviation: string | null;
+  jurisdiction_type: string | null;
+  nmls: string | null;
+  reason: string | null;
+  comments: string | null;
+  source_row: number;
+};
+
+export type CurrentTracker = {
+  metadata: {
+    source_workbook: string;
+    source_last_modified_at: string;
+    source_sheets: string[];
+    db_rows: number;
+    tracked_jurisdictions: number;
+    data_minimization: string;
+  };
+  as_of: string;
+  selected_window: string;
+  available_windows: Array<{ value: string; label: string }>;
+  summary: {
+    events_total: number;
+    due_next_30: number;
+    due_next_90: number;
+    due_this_year: number;
+    overdue: number;
+    non_licensed: number;
+    tracked_jurisdictions: number;
+  };
+  events: CurrentTrackerEvent[];
+  non_licensed: NonLicensedTrackerState[];
+};
+
 export type PortalDefinition = {
   id: string;
   portal_key: string;

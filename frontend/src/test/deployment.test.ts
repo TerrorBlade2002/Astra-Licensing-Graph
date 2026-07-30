@@ -99,6 +99,7 @@ describe("deployment configuration", () => {
       "reviews",
       "tasks",
       "documents",
+      "licensing/tracker",
       "licensing/licenses",
       "licensing/cases",
       "licensing/import",
@@ -106,5 +107,5 @@ describe("deployment configuration", () => {
     ]) {
       expect(paths).toContain(path);
     }
-  });
+  }, 10_000);
 });

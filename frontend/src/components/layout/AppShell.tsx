@@ -6,6 +6,7 @@ import { entraEnabled, msal } from "../../auth/msal";
 
 const links = [
   ["/licensing", "Licensing overview", "L"],
+  ["/licensing/tracker", "Current tracker", "T"],
   ["/licensing/licenses", "License inventory", "I"],
   ["/licensing/cases", "Compliance cases", "C"],
   ["/licensing/calendar", "Compliance calendar", "D"],
@@ -45,7 +46,7 @@ export function AppShell() {
         </div>
         <nav aria-label="Primary navigation">
           {links.map(([to, label, icon]) => (
-            <NavLink key={to} to={to} end={to === "/"}>
+            <NavLink key={to} to={to} end={to === "/" || to === "/licensing"}>
               <span aria-hidden>{icon}</span>
               {label}
             </NavLink>

@@ -24,7 +24,12 @@ from app.models import (
     RequirementSourceSnapshot,
 )
 from app.models.mixins import utcnow
-from app.schemas.licensing import DashboardSummaryOut, DataQualityReportOut
+from app.schemas.licensing import (
+    CurrentTrackerOut,
+    DashboardSummaryOut,
+    DataQualityReportOut,
+)
+from app.services.current_tracker_service import TrackerWindow, current_tracker
 from app.services.licensing_data_quality import LicensingDataQualityService
 
 router = APIRouter(prefix="/licensing-dashboard", tags=["licensing-dashboard"])
@@ -140,6 +145,14 @@ async def upcoming_deadlines(
         }
         for row in rows
     ]
+
+
+@router.get("/current-tracker", response_model=CurrentTrackerOut)
+async def current_tracker_snapshot(
+    actor: ActorDep, window: TrackerWindow = "ALL"
+) -> dict[str, Any]:
+    """Return the minimized snapshot built from the maintained tracker sheets."""
+    return current_tracker(window=window)
 
 
 @router.get("/stale-information")

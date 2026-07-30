@@ -72,6 +72,7 @@ async def test_read_only_dashboards_respond_on_an_empty_database(client: AsyncCl
     """
     for path in (
         "/api/v1/licensing-dashboard/summary",
+        "/api/v1/licensing-dashboard/current-tracker",
         "/api/v1/licensing-dashboard/upcoming-deadlines",
         "/api/v1/licensing-dashboard/stale-information",
         "/api/v1/licensing-dashboard/missing-documents",

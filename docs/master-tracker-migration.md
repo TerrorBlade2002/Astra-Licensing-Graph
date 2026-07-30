@@ -23,3 +23,22 @@ document IDs, mappings, and sheet names—never workbook bytes.
 Reconciliation uses the import report and data-quality command. Rollback is a
 reviewed database restoration or compensating inventory change; import history
 itself remains evidence.
+
+## Current portal tracker snapshot
+
+The read-only Current Tracker portal page is built from a minimized JSON
+snapshot. The builder reads only `DB` and `Non Licensed States`, validates the
+expected DB columns, carries source row/cell provenance, and deliberately omits
+licence, bond, annual-report, and other-document identifiers.
+
+Refresh the deployed snapshot after receiving an approved replacement workbook:
+
+```powershell
+python scripts/build_tracker_snapshot.py `
+  --input "C:\path\to\Main License Book.xlsx" `
+  --output app\data\current_tracker.json
+```
+
+Review the generated diff and run the full quality gate before committing. The
+non-licensed portal section is derived from every current `DB` row whose status
+is `Not Licensed`; it does not silently inherit a stale pivot source range.
