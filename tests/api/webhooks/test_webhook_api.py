@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-import time
-
 import pytest
 import respx
 from httpx import AsyncClient
@@ -48,26 +45,24 @@ async def test_validation_token_with_url_encoding(client: AsyncClient) -> None:
 async def test_valid_notification_persists_receipt_and_enqueues_job(
     client: AsyncClient, session: AsyncSession, seeded_subscription
 ) -> None:
-    # Zero respx routes are registered: any outbound Graph HTTP call would
-    # raise immediately, proving the handler never calls Graph.
+    # The fast path is asserted structurally rather than by wall clock. Zero
+    # respx routes are registered, so any outbound Graph call raises
+    # immediately — that is what "does not call Graph inline" means, and it
+    # holds regardless of how loaded the machine is.
     #
-    # Warm the app first: the measurement below is about the handler's fast
-    # path, not about first-request import and connection-pool cost.
-    await client.get("/health/ready")
-    started = time.perf_counter()
+    # An absolute duration bound lived here previously and produced false
+    # failures under coverage tracing and on a busy machine, which is noise
+    # about the host rather than evidence about the handler.
     response = await client.post(
         WEBHOOK,
         json={
             "value": [notification_item(subscription_id="synth-sub-001", client_state=CLIENT_STATE)]
         },
     )
-    duration = time.perf_counter() - started
     assert response.status_code == 202
-    # The fast path itself is guaranteed structurally by the respx mock above.
-    # The wall-clock bound is a supporting check, and only meaningful when the
-    # interpreter is not tracing every line for coverage.
-    if "coverage" not in sys.modules:
-        assert duration < 2.0
+    # Accepted before the work happens: the job is queued, not executed inline.
+    job_status = await session.scalar(select(GraphJob.status))
+    assert job_status == "PENDING"
 
     receipt = await session.scalar(select(GraphNotificationReceipt))
     assert receipt is not None

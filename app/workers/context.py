@@ -11,6 +11,7 @@ from app.core.config import Settings
 from app.db.session import create_engine, create_session_factory
 from app.evidence.base import EvidenceStore
 from app.evidence.filesystem import FilesystemEvidenceStore
+from app.evidence.r2 import R2EvidenceStore
 from app.evidence.sharepoint import SharePointEvidenceStore
 from app.graph.auth import GraphTokenProvider, MsalConfidentialClientTokenProvider
 from app.graph.client import GraphHttpClient
@@ -20,6 +21,8 @@ from app.sharepoint.client import SharePointClient
 def build_evidence_store(settings: Settings, graph_client: GraphHttpClient) -> EvidenceStore:
     if settings.evidence_storage_backend == "filesystem":
         return FilesystemEvidenceStore(settings.filesystem_evidence_root)
+    if settings.evidence_storage_backend == "r2":
+        return R2EvidenceStore(settings)
     if not settings.sharepoint_site_id or not settings.sharepoint_working_documents_drive_id:
         raise ValueError("SharePoint evidence requires site and working-document drive IDs")
     client = SharePointClient(graph_client, settings)

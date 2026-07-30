@@ -39,6 +39,10 @@ dependencies = [
     # Milestone 7 uses reviewed, human-supervised browser adapters. Chromium is
     # installed only in the isolated browser-worker image.
     "playwright==1.55.0",
+    # Cloudflare R2 speaks the S3 API with SigV4. boto3 is the maintained
+    # client for it; hand-rolled request signing is a poor thing to get subtly
+    # wrong when it guards document evidence.
+    "boto3>=1.35,<2",
 ]
 
 [project.optional-dependencies]
@@ -94,7 +98,7 @@ show_error_codes = true
 exclude = ["prototype-data", "attachments", "\\.venv"]
 
 [[tool.mypy.overrides]]
-module = ["asyncpg.*", "msal.*", "openpyxl.*", "reportlab.*"]
+module = ["asyncpg.*", "msal.*", "openpyxl.*", "reportlab.*", "boto3.*", "botocore.*"]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]

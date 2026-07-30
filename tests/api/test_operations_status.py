@@ -99,3 +99,14 @@ async def test_operations_status_exposes_no_secret_or_delta_link(client: AsyncCl
         "@",
     ):
         assert forbidden not in payload, forbidden
+
+
+async def test_storage_status_reports_backend_without_credentials(client: AsyncClient) -> None:
+    """Operators need to know where documents land; never how to reach it."""
+    response = await client.get("/api/v1/integrations/storage/status")
+    assert response.status_code == 200
+    body = response.json()
+    assert body["backend"] in {"filesystem", "sharepoint", "r2"}
+    serialized = response.text.lower()
+    for forbidden in ("secret", "access_key", "aws_", "password"):
+        assert forbidden not in serialized

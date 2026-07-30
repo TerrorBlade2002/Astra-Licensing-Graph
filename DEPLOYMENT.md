@@ -155,6 +155,12 @@ DATABASE_URL=${{Postgres.DATABASE_URL}}
 **SharePoint:** `SHAREPOINT_ENABLED`, `SHAREPOINT_SITE_ID`,
 `SHAREPOINT_EXPECTED_APP_ID`, and every `SHAREPOINT_*_DRIVE_ID`.
 
+**Document storage:** `EVIDENCE_STORAGE_BACKEND` selects where document content
+is written — `sharepoint` (repository of record) or `r2` (Cloudflare fallback,
+bucket `astra-licensing-documents`). R2 additionally needs `R2_ACCOUNT_ID`,
+`R2_BUCKET`, `R2_ACCESS_KEY_ID`, and `R2_SECRET_ACCESS_KEY` on every service
+that writes evidence. See [docs/r2-document-storage.md](docs/r2-document-storage.md).
+
 **Classification:** `CLASSIFICATION_ENABLED`, `AI_CLASSIFICATION_ENABLED`,
 `OPENAI_API_KEY` and `OPENAI_MODEL` (only once external-provider use is
 approved).
@@ -173,6 +179,7 @@ passes these to the Docker build, where Vite inlines them.
 ### Never in frontend variables
 
 `GRAPH_CLIENT_SECRET`, `OPENAI_API_KEY`, `DATABASE_URL`, any SharePoint secret,
+`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`,
 `BROWSER_SESSION_ENCRYPTION_KEY_REFERENCE`. They would be published in the
 public bundle.
 

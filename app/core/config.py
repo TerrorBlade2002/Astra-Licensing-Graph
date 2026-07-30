@@ -13,7 +13,7 @@ AppEnv = Literal["local", "test", "staging", "production"]
 AuthMode = Literal["development", "entra"]
 LogFormat = Literal["json", "console"]
 GraphCredentialMode = Literal["client_secret", "certificate"]
-EvidenceBackend = Literal["filesystem", "sharepoint"]
+EvidenceBackend = Literal["filesystem", "sharepoint", "r2"]
 SharePointPermissionMode = Literal["sites_selected", "tenant_wide"]
 UploadConflictBehavior = Literal["fail", "rename", "replace-current-version"]
 PacketArchiveFormat = Literal["ZIP", "NONE"]
@@ -351,6 +351,20 @@ class Settings(BaseSettings):
     quarantine_unknown_attachments: bool = Field(
         default=True, alias="QUARANTINE_UNKNOWN_ATTACHMENTS"
     )
+
+    # -------------------------------------------------- Cloudflare R2 storage
+    #: SharePoint stays the repository of record. R2 is the object store used
+    #: when SharePoint is unavailable or not yet provisioned, so that production
+    #: never has to fall back to the filesystem backend.
+    r2_account_id: str | None = Field(default=None, alias="R2_ACCOUNT_ID")
+    r2_bucket: str | None = Field(default=None, alias="R2_BUCKET")
+    r2_access_key_id: str | None = Field(default=None, alias="R2_ACCESS_KEY_ID")
+    r2_secret_access_key: str | None = Field(default=None, alias="R2_SECRET_ACCESS_KEY")
+    #: Defaults to the account-derived endpoint; override only for a custom domain.
+    r2_endpoint_url_override: str | None = Field(default=None, alias="R2_ENDPOINT_URL")
+    r2_multipart_part_bytes: int = Field(default=8 * 1024 * 1024, alias="R2_MULTIPART_PART_BYTES")
+    r2_connect_timeout_seconds: float = Field(default=10, alias="R2_CONNECT_TIMEOUT_SECONDS")
+    r2_read_timeout_seconds: float = Field(default=60, alias="R2_READ_TIMEOUT_SECONDS")
 
     # ------------------------------------------------------------ SharePoint
     sharepoint_enabled: bool = Field(default=False, alias="SHAREPOINT_ENABLED")
@@ -1026,6 +1040,25 @@ class Settings(BaseSettings):
         problems: list[str] = []
         deployed = self.app_env in ("staging", "production")
 
+        # R2 is only safe when it is completely configured: a half-configured
+        # object store fails at the moment evidence is written, which is the
+        # worst possible time to discover it.
+        if self.evidence_storage_backend == "r2":
+            for name, value in (
+                ("R2_ACCOUNT_ID", self.r2_account_id),
+                ("R2_BUCKET", self.r2_bucket),
+                ("R2_ACCESS_KEY_ID", self.r2_access_key_id),
+                ("R2_SECRET_ACCESS_KEY", self.r2_secret_access_key),
+            ):
+                if not value:
+                    problems.append(f"EVIDENCE_STORAGE_BACKEND=r2 requires {name}")
+        if self.r2_multipart_part_bytes < 5 * 1024 * 1024:
+            problems.append("R2_MULTIPART_PART_BYTES must be at least 5 MiB (S3 minimum)")
+        if self.r2_endpoint_url_override and not self.r2_endpoint_url_override.startswith(
+            "https://"
+        ):
+            problems.append("R2_ENDPOINT_URL must use HTTPS")
+
         for name, value in (("FRONTEND_URL", self.frontend_url), ("BACKEND_URL", self.backend_url)):
             if not value:
                 continue
@@ -1046,6 +1079,15 @@ class Settings(BaseSettings):
         if _is_loopback(self.database_url):
             problems.append("production DATABASE_URL must not point at a local database")
         return problems
+
+    @property
+    def r2_endpoint_url(self) -> str | None:
+        """S3 endpoint for the configured R2 account."""
+        if self.r2_endpoint_url_override:
+            return self.r2_endpoint_url_override.rstrip("/")
+        if not self.r2_account_id:
+            return None
+        return f"https://{self.r2_account_id}.r2.cloudflarestorage.com"
 
     @property
     def graph_allowed_host(self) -> str:

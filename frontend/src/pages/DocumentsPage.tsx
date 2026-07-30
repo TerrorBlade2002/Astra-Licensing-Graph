@@ -10,10 +10,28 @@ type Doc = {
   jurisdiction: string | null;
   current_filename: string | null;
 };
+type StorageStatus = {
+  backend: string;
+  bucket?: string | null;
+  site_id?: string | null;
+  root?: string | null;
+  credentials_configured?: boolean;
+};
+
+const BACKEND_LABELS: Record<string, string> = {
+  sharepoint: "SharePoint (repository of record)",
+  r2: "Cloudflare R2 object storage",
+  filesystem: "Local filesystem (development only)",
+};
+
 export function DocumentsPage() {
   const q = useQuery({
     queryKey: ["documents"],
     queryFn: () => api<{ items: Doc[] }>("/documents?page_size=50"),
+  });
+  const storage = useQuery({
+    queryKey: ["storage-status"],
+    queryFn: () => api<StorageStatus>("/integrations/storage/status"),
   });
   if (q.isLoading) return <Loading />;
   if (q.error) return <ErrorState error={q.error} />;
@@ -28,6 +46,15 @@ export function DocumentsPage() {
             links.
           </p>
         </div>
+        {storage.data ? (
+          <div className="storage-badge">
+            <span className="eyebrow">Content stored in</span>
+            <strong>
+              {BACKEND_LABELS[storage.data.backend] ?? storage.data.backend}
+            </strong>
+            {storage.data.bucket ? <small>{storage.data.bucket}</small> : null}
+          </div>
+        ) : null}
       </div>
       <div className="table-wrap">
         <table>

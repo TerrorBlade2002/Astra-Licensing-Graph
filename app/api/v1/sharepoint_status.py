@@ -46,6 +46,39 @@ async def sharepoint_status(session: SessionDep, settings: SettingsDep) -> dict[
     }
 
 
+storage_router = APIRouter(prefix="/integrations/storage", tags=["storage"])
+
+
+@storage_router.get("/status")
+async def storage_status(settings: SettingsDep) -> dict[str, Any]:
+    """Where governed document content is written, without exposing credentials.
+
+    SharePoint stays the repository of record; R2 is the fallback object store.
+    Only the backend name, bucket, and whether credentials are present are
+    reported — never a key, secret, or signed URL.
+    """
+    backend = settings.evidence_storage_backend
+    detail: dict[str, Any] = {"backend": backend}
+    if backend == "r2":
+        detail |= {
+            "bucket": settings.r2_bucket,
+            "endpoint_host": (
+                settings.r2_endpoint_url.split("://", 1)[-1] if settings.r2_endpoint_url else None
+            ),
+            "credentials_configured": bool(
+                settings.r2_access_key_id and settings.r2_secret_access_key
+            ),
+        }
+    elif backend == "sharepoint":
+        detail |= {
+            "site_id": settings.sharepoint_site_id,
+            "permission_mode": settings.sharepoint_permission_mode,
+        }
+    else:
+        detail |= {"root": settings.filesystem_evidence_root}
+    return detail
+
+
 @router.get("/drives")
 async def list_sharepoint_drives(session: SessionDep) -> list[dict[str, Any]]:
     drives = list(

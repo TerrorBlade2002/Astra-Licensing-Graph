@@ -1925,3 +1925,12 @@ td small {
   display: grid;
   gap: 14px;
 }
+.storage-badge {
+  text-align: right;
+}
+.storage-badge strong {
+  display: block;
+}
+.storage-badge small {
+  color: var(--muted);
+}
