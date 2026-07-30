@@ -162,7 +162,7 @@ jobs:
           (cd frontend && npm run dev -- --host 127.0.0.1 > ../frontend-e2e.log 2>&1) &
           FRONTEND_PID=$!
           trap 'kill "$BACKEND_PID" "$FRONTEND_PID" 2>/dev/null || true' EXIT
-          for URL in http://127.0.0.1:8000/health http://127.0.0.1:5173; do
+          for URL in http://127.0.0.1:8000/health/ready http://127.0.0.1:5173; do
             for ATTEMPT in {1..30}; do
               curl --fail --silent "$URL" > /dev/null && break
               sleep 1
