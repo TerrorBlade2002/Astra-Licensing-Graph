@@ -32,7 +32,7 @@ def _settings(test_database_url: str) -> Settings:
         GRAPH_ENABLED=True,
         GRAPH_TENANT_ID="synthetic-tenant",
         GRAPH_CLIENT_ID="synthetic-client",
-        GRAPH_CLIENT_SECRET="synthetic-secret",
+        GRAPH_CLIENT_SECRET="test-only",
     )
 
 

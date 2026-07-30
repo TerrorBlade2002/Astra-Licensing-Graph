@@ -154,7 +154,7 @@ def graph_settings(test_database_url: str, tmp_path: Path) -> Settings:
         GRAPH_ENABLED=True,
         GRAPH_TENANT_ID="00000000-0000-0000-0000-00000000t3st",
         GRAPH_CLIENT_ID="synthetic-client-id",
-        GRAPH_CLIENT_SECRET="synthetic-client-secret",
+        GRAPH_CLIENT_SECRET="test-only",
         FILESYSTEM_EVIDENCE_ROOT=str(tmp_path / "evidence"),
         GRAPH_MAX_RETRY_ATTEMPTS=3,
         GRAPH_MAX_RETRY_DELAY_SECONDS=0.05,
