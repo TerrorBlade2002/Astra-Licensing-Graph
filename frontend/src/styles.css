@@ -79,8 +79,13 @@ button,
 .sidebar nav {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
   gap: 4px;
   margin-top: 28px;
+  margin-bottom: 12px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 .sidebar nav a {
   color: #b7c8c2;

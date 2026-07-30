@@ -292,7 +292,7 @@ export function TaskDetailPage() {
             </div>
           )}
           <p>
-            Classification approval never authorizes a send. A separate Sender
+            Classification approval creates no send action. A separate Sender
             must approve the exact draft snapshot.
           </p>
         </section>

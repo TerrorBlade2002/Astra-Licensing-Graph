@@ -7,7 +7,7 @@ import { entraEnabled, msal } from "../../auth/msal";
 const links = [
   ["/licensing", "Licensing overview", "L"],
   ["/licensing/tracker", "Current tracker", "T"],
-  ["/licensing/licenses", "License inventory", "I"],
+  ["/licensing/licenses", "Licenses", "I"],
   ["/licensing/cases", "Compliance cases", "C"],
   ["/licensing/calendar", "Compliance calendar", "D"],
   ["/licensing/requirements", "Requirement matrix", "R"],
