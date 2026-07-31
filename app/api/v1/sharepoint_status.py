@@ -18,7 +18,9 @@ router = APIRouter(prefix="/integrations/sharepoint", tags=["sharepoint"])
 
 
 @router.get("/status")
-async def sharepoint_status(session: SessionDep, settings: SettingsDep) -> dict[str, Any]:
+async def sharepoint_status(
+    session: SessionDep, settings: SettingsDep, actor: ActorDep
+) -> dict[str, Any]:
     site = await session.scalar(select(SharePointSite).where(SharePointSite.is_active.is_(True)))
     drive_count = await session.scalar(
         select(func.count(SharePointDrive.id)).where(SharePointDrive.is_active.is_(True))
@@ -50,12 +52,13 @@ storage_router = APIRouter(prefix="/integrations/storage", tags=["storage"])
 
 
 @storage_router.get("/status")
-async def storage_status(settings: SettingsDep) -> dict[str, Any]:
+async def storage_status(settings: SettingsDep, actor: ActorDep) -> dict[str, Any]:
     """Where governed document content is written, without exposing credentials.
 
     SharePoint stays the repository of record; R2 is the fallback object store.
     Only the backend name, bucket, and whether credentials are present are
-    reported — never a key, secret, or signed URL.
+    reported — never a key, secret, or signed URL. It still requires a signed-in
+    actor: which store holds the evidence is operational detail, not public.
     """
     backend = settings.evidence_storage_backend
     detail: dict[str, Any] = {"backend": backend}
@@ -80,7 +83,7 @@ async def storage_status(settings: SettingsDep) -> dict[str, Any]:
 
 
 @router.get("/drives")
-async def list_sharepoint_drives(session: SessionDep) -> list[dict[str, Any]]:
+async def list_sharepoint_drives(session: SessionDep, actor: ActorDep) -> list[dict[str, Any]]:
     drives = list(
         (await session.scalars(select(SharePointDrive).order_by(SharePointDrive.purpose))).all()
     )
@@ -107,7 +110,9 @@ async def list_sharepoint_drives(session: SessionDep) -> list[dict[str, Any]]:
 
 
 @router.get("/jobs")
-async def list_document_jobs(session: SessionDep, limit: int = 100) -> list[dict[str, Any]]:
+async def list_document_jobs(
+    session: SessionDep, actor: ActorDep, limit: int = 100
+) -> list[dict[str, Any]]:
     jobs = list(
         (
             await session.scalars(
