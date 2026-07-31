@@ -1507,6 +1507,14 @@ td small {
   border-radius: 0.35rem;
 }
 
+.no-role-notice {
+  margin: 1rem 1.5rem 0;
+}
+
+.no-role-notice p {
+  margin: 0.35rem 0 0;
+}
+
 .handoff-card {
   border: 1px solid var(--border);
   border-radius: 0.6rem;

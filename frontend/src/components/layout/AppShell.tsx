@@ -87,6 +87,17 @@ export function AppShell() {
             )}
           </div>
         </header>
+        {entraEnabled && data && data.roles.length === 0 && (
+          <div className="safety-callout no-role-notice">
+            <strong>No licensing roles assigned yet.</strong>
+            <p>
+              You are signed in, but your account has no application role, so
+              every page is read-only. An administrator assigns roles under
+              Entra ID → Enterprise applications → Astra Licensing → Users and
+              groups.
+            </p>
+          </div>
+        )}
         <Outlet />
       </div>
     </div>

@@ -23,16 +23,19 @@ class EntraTokenValidator:
             raise ValueError("Unsupported or unsigned access token.")
         key = jwt.PyJWK.from_dict(await self.cache.key(kid)).key
         tenant = self.settings.entra_required_tenant_id or self.settings.entra_tenant_id
-        issuer = self.settings.entra_issuer or f"https://login.microsoftonline.com/{tenant}/v2.0"
         claims: dict[str, Any] = jwt.decode(
             token,
             key=key,
             algorithms=self.settings.entra_allowed_algorithms,
-            audience=self.settings.entra_api_audience,
-            issuer=issuer,
+            audience=self.settings.entra_accepted_audiences,
             leeway=self.settings.entra_clock_skew_seconds,
             options={"require": ["exp", "nbf", "iss", "aud", "tid", "oid"]},
         )
+        # Checked here rather than through jwt.decode's single-issuer argument,
+        # because a tenant has two valid issuer forms depending on the token
+        # version the registration requests.
+        if claims.get("iss") not in self.settings.entra_accepted_issuers:
+            raise ValueError("Access token issuer is not permitted.")
         if claims.get("tid") != tenant:
             raise ValueError("Access token tenant is not permitted.")
         scopes = str(claims.get("scp", "")).split()

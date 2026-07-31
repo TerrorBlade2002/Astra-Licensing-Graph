@@ -1081,6 +1081,38 @@ class Settings(BaseSettings):
         return problems
 
     @property
+    def entra_accepted_audiences(self) -> list[str]:
+        """Audience values Entra may put in a token for this API.
+
+        Requesting ``api://<client-id>/Licensing.Access`` yields ``aud`` as
+        either the App ID URI or the resource's client id, depending on the
+        registration's token version. Both name the same application, so both
+        are accepted; anything else is still rejected.
+        """
+        values = [self.entra_api_audience, self.entra_api_client_id]
+        return [value for value in dict.fromkeys(values) if value]
+
+    @property
+    def entra_accepted_issuers(self) -> list[str]:
+        """Issuers permitted for the configured tenant.
+
+        A registration left at ``requestedAccessTokenVersion: null`` issues v1
+        tokens from ``sts.windows.net``; setting it to 2 issues v2 tokens from
+        ``login.microsoftonline.com``. Both are Microsoft-signed for this
+        tenant, and ``tid`` is checked separately, so accepting both removes a
+        confusing class of 401 without widening who can authenticate.
+        """
+        if self.entra_issuer:
+            return [self.entra_issuer]
+        tenant = self.entra_required_tenant_id or self.entra_tenant_id
+        if not tenant:
+            return []
+        return [
+            f"https://login.microsoftonline.com/{tenant}/v2.0",
+            f"https://sts.windows.net/{tenant}/",
+        ]
+
+    @property
     def r2_endpoint_url(self) -> str | None:
         """S3 endpoint for the configured R2 account."""
         if self.r2_endpoint_url_override:

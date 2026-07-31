@@ -203,7 +203,9 @@ a variable is missing or unsafe. It never prints a secret value.
   `https://api.<approved-domain>/api/v1` and add the frontend origin to
   `CORS_ORIGINS`.
 - Register both the frontend origin and its `/` redirect URI on the Entra SPA
-  app registration.
+  app registration. The full sign-in setup — scope, app roles, role
+  assignment, and the variables on each service — is in
+  [docs/entra-sign-in.md](docs/entra-sign-in.md).
 
 Workers, the scheduler, and the browser worker have no domain and reach the
 database over Railway's private network.
