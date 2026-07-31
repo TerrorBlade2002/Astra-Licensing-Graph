@@ -3,6 +3,51 @@
 All commands run from the repo root with the venv active and `DATABASE_URL`
 exported. No command prints tokens, secrets, clientState, or full delta links.
 
+## First run against a real mailbox
+
+Delta sync and subscriptions both address a folder by its Graph folder id, so
+the mailbox and its folders must be catalogued before anything can be watched.
+The development seed invents folder ids, which Graph answers with 404; this
+reads the real tree.
+
+```powershell
+python -m app.cli.graph_mailbox_bootstrap --mailbox astralicensing@astraglobal.com --dry-run
+python -m app.cli.graph_mailbox_bootstrap --mailbox astralicensing@astraglobal.com
+```
+
+The dry run is the cheapest test of Graph permissions: a `403` means the
+application permission `Mail.Read` has not been granted admin consent, and a
+`404` means Graph does not know that mailbox. It refuses any address other than
+`GRAPH_MAILBOX`, creates no subscription, and writes nothing to the mailbox.
+
+Re-run it after folders are added or renamed. Folders that have disappeared are
+reported rather than deleted, because sync state and ingested email reference
+the folder row.
+
+Then enqueue a baseline sync for each folder to be tracked. A folder gains
+sync state on its first sync, after which the scheduler reconciles it every
+`GRAPH_RECONCILIATION_INTERVAL_SECONDS` (default 300) without further action.
+
+```powershell
+python -m app.cli.graph_sync enqueue --mailbox astralicensing@astraglobal.com --folder Inbox --reason MANUAL
+```
+
+### Verified on staging, 2026-08-01
+
+`GRAPH_ENABLED=true` against `astralicensing@astraglobal.com`, with send,
+draft creation, and message move all still disabled.
+
+| Step | Result |
+| --- | --- |
+| App-only token | acquired |
+| Folder discovery | 19 folders, all 12 workflow folders present |
+| Baseline sync of Inbox | 1 page, 2 messages created |
+| Ingestion | 2 emails with 2 attachments, `message_get` and `attachment_list` both 200 |
+| Classification | deterministic, `renewal_notice`, state extracted, flagged for human review |
+| Scheduled reconciliation | enqueued five minutes later, delta returned no changes |
+
+No message was moved and nothing was written to the mailbox.
+
 ## Inspecting subscriptions
 
 ```powershell
