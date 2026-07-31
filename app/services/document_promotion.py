@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.documents.enums import LinkType, SourceType
 from app.evidence.filesystem import FilesystemEvidenceStore
+from app.evidence.sharepoint import SharePointEvidenceStore
 from app.models import EmailAttachment
 from app.services.document_upload import (
     DocumentUploadMetadata,
@@ -45,6 +46,13 @@ class DocumentPromotionService:
             _site_id, drive_id, item_id = parse_sharepoint_storage_uri(attachment.storage_uri)
             cleanup = Path(tempfile.mkdtemp(prefix="astra-promotion-"))
             local_store = FilesystemEvidenceStore(cleanup)
+            # The evidence lives in SharePoint, so promoting it needs a
+            # SharePoint-backed store regardless of where the copy will land.
+            if not isinstance(self.uploader.store, SharePointEvidenceStore):
+                shutil.rmtree(cleanup, ignore_errors=True)
+                raise ValueError(
+                    "This attachment is stored in SharePoint, which is not enabled here."
+                )
             await self.uploader.store.client.download_to_store(
                 drive_id,
                 item_id,

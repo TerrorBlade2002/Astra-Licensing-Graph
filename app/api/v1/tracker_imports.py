@@ -46,7 +46,7 @@ async def plan_import(
         raise StateConflictError("mapping_json must be an object of source-to-target columns.")
     source_document_id = None
     if settings.sharepoint_enabled:
-        from app.api.v1.document_operations import _clients, _uploader
+        from app.api.v1.document_operations import _aclose, _clients, _uploader
 
         suffix = Path(file.filename or "tracker.csv").suffix or ".csv"
         with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as handle:
@@ -71,8 +71,7 @@ async def plan_import(
             source_document_id = outcome.document.id
         finally:
             source_path.unlink(missing_ok=True)
-            await sharepoint.aclose()
-            await graph.aclose()
+            await _aclose(sharepoint, graph)
     return await TrackerImportService(session, settings).plan(
         actor=actor,
         filename=file.filename or "tracker.csv",

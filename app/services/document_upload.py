@@ -23,6 +23,7 @@ from app.documents.metadata import REQUIRED_COLUMNS, discover_column_mapping, to
 from app.documents.naming import canonical_filename
 from app.documents.policies import validate_content
 from app.documents.routing import route_document
+from app.evidence.base import EvidenceStore
 from app.evidence.sharepoint import SharePointEvidenceStore
 from app.models import (
     Document,
@@ -59,11 +60,16 @@ class UploadOutcome:
     duplicate: bool
 
 
+#: Recorded in the SharePoint identity columns when an object store holds the
+#: content, so a version row is never ambiguous about where its bytes live.
+OBJECT_STORE_SITE_SENTINEL = "object-store"
+
+
 class DocumentUploadService:
     def __init__(
         self,
         session: AsyncSession,
-        store: SharePointEvidenceStore,
+        store: EvidenceStore,
         *,
         allowed_mime_types: list[str],
         allowed_extensions: list[str],
@@ -123,16 +129,20 @@ class DocumentUploadService:
             return UploadOutcome(duplicate, None, True)
 
         purpose = route_document(metadata.document_type)
-        drive = await self.session.scalar(
-            select(SharePointDrive).where(
-                SharePointDrive.purpose == purpose.value, SharePointDrive.is_active.is_(True)
+        sharepoint_backed = isinstance(self.store, SharePointEvidenceStore)
+        drive = None
+        site = None
+        if sharepoint_backed:
+            drive = await self.session.scalar(
+                select(SharePointDrive).where(
+                    SharePointDrive.purpose == purpose.value, SharePointDrive.is_active.is_(True)
+                )
             )
-        )
-        if drive is None or not drive.root_drive_item_id:
-            raise ValueError(f"No active SharePoint route is configured for {purpose.value}.")
-        site = await self.session.get(SharePointSite, drive.site_id)
-        if site is None:
-            raise ValueError("SharePoint site catalog entry is missing.")
+            if drive is None or not drive.root_drive_item_id:
+                raise ValueError(f"No active SharePoint route is configured for {purpose.value}.")
+            site = await self.session.get(SharePointSite, drive.site_id)
+            if site is None:
+                raise ValueError("SharePoint site catalog entry is missing.")
 
         document_id = uuid.uuid4()
         document_key = f"ASTRA-{document_id.hex.upper()}"
@@ -180,14 +190,31 @@ class DocumentUploadService:
                 document.source_attachment_id = entity_id
             elif link_type == "TASK":
                 document.source_task_id = entity_id
+        # One storage key for both worlds. For SharePoint it is the drive path
+        # the evidence store expects; for an object store it is the object key,
+        # which is also recorded as the drive item id so a download can find it
+        # without a second lookup table.
+        if drive is not None and site is not None:
+            object_key = f"{drive.graph_drive_id}/{drive.root_drive_item_id}/{filename}"
+            placement_site = site.graph_site_id
+            placement_container = drive.graph_drive_id
+            placement_item = f"pending:{idempotency_key[:80]}"
+            placement_list = drive.graph_list_id
+        else:
+            object_key = f"documents/{purpose.value.lower()}/{document_id.hex}/{filename}"
+            placement_site = OBJECT_STORE_SITE_SENTINEL
+            placement_container = OBJECT_STORE_SITE_SENTINEL
+            placement_item = object_key
+            placement_list = None
+
         version = DocumentVersion(
             id=uuid.uuid4(),
             document_id=document.id,
             version_number=1,
-            graph_site_id=site.graph_site_id,
-            graph_drive_id=drive.graph_drive_id,
-            graph_drive_item_id=f"pending:{idempotency_key[:80]}",
-            graph_list_id=drive.graph_list_id,
+            graph_site_id=placement_site,
+            graph_drive_id=placement_container,
+            graph_drive_item_id=placement_item,
+            graph_list_id=placement_list,
             filename=filename,
             mime_type=mime_type,
             size_bytes=size,
@@ -208,7 +235,7 @@ class DocumentUploadService:
 
         try:
             result = await self.store.put_stream(
-                f"{drive.graph_drive_id}/{drive.root_drive_item_id}/{filename}",
+                object_key,
                 file_chunks(),
                 max_bytes=self.max_bytes,
                 content_type=mime_type,
@@ -224,10 +251,10 @@ class DocumentUploadService:
             document.lifecycle_status = LifecycleStatus.QUARANTINED.value
             self.repo.add_event(document.id, "HASH_MISMATCH", actor_type="SYSTEM", actor_id=None)
             await self.session.commit()
-            raise ValueError("SharePoint upload verification failed.")
+            raise ValueError("Document upload verification failed.")
         version.graph_drive_item_id = result.drive_item_id or version.graph_drive_item_id
         version.graph_list_item_id = result.list_item_id
-        version.parent_graph_drive_item_id = drive.root_drive_item_id
+        version.parent_graph_drive_item_id = drive.root_drive_item_id if drive is not None else None
         version.web_url = result.web_url
         version.graph_etag = result.etag
         version.graph_ctag = result.ctag
@@ -236,16 +263,25 @@ class DocumentUploadService:
         self._add_links(document.id, links or [], actor_id)
         self.repo.add_event(document.id, "UPLOADED", actor_type="SYSTEM", actor_id=None)
         await self.session.commit()
-        if drive.graph_list_id and result.list_item_id:
+        # Metadata columns exist only in a SharePoint list; an object store has
+        # no equivalent, and the catalog already holds the same fields.
+        if (
+            drive is not None
+            and site is not None
+            and isinstance(self.store, SharePointEvidenceStore)
+            and drive.graph_list_id
+            and result.list_item_id
+        ):
+            sharepoint_store = self.store
             try:
-                columns = await self.store.client.list_columns(
+                columns = await sharepoint_store.client.list_columns(
                     site.graph_site_id, drive.graph_list_id
                 )
                 mapping, incompatible = discover_column_mapping(columns)
                 missing = sorted(set(REQUIRED_COLUMNS) - set(mapping))
                 if missing or incompatible:
                     raise ValueError("SharePoint custom columns are missing or incompatible.")
-                await self.store.client.update_list_item_fields(
+                await sharepoint_store.client.update_list_item_fields(
                     site.graph_site_id,
                     drive.graph_list_id,
                     result.list_item_id,

@@ -206,3 +206,44 @@ async def test_metadata_reports_size_and_type_for_a_stored_object() -> None:
 def test_not_found_detection_covers_botocore_shapes() -> None:
     assert _is_not_found(_not_found()) is True
     assert _is_not_found(RuntimeError("boom")) is False
+
+
+# ------------------------------------------------- backend switch behaviour
+
+
+def test_object_stored_versions_are_identifiable_and_carry_their_key() -> None:
+    """Switching backends must not make old versions ambiguous.
+
+    A version written to an object store records the object key in the same
+    column SharePoint uses for its item id, so a later download resolves it
+    without a second lookup table.
+    """
+    from app.models import DocumentVersion
+    from app.services.document_content import version_is_object_stored
+    from app.services.document_upload import OBJECT_STORE_SITE_SENTINEL
+
+    object_version = DocumentVersion(
+        graph_site_id=OBJECT_STORE_SITE_SENTINEL,
+        graph_drive_id=OBJECT_STORE_SITE_SENTINEL,
+        graph_drive_item_id="documents/licenses/abc123/file.pdf",
+    )
+    sharepoint_version = DocumentVersion(
+        graph_site_id="contoso.sharepoint.com,guid,guid",
+        graph_drive_id="b!drive",
+        graph_drive_item_id="01ITEM",
+    )
+
+    assert version_is_object_stored(object_version) is True
+    assert version_is_object_stored(sharepoint_version) is False
+    assert object_version.graph_drive_item_id.endswith("file.pdf")
+
+
+def test_source_store_follows_the_configured_backend() -> None:
+    from app.evidence.filesystem import FilesystemEvidenceStore
+    from app.services.document_content import source_store_for
+
+    assert isinstance(source_store_for(_settings(EVIDENCE_STORAGE_BACKEND="r2")), R2EvidenceStore)
+    assert isinstance(
+        source_store_for(_settings(EVIDENCE_STORAGE_BACKEND="filesystem")),
+        FilesystemEvidenceStore,
+    )

@@ -17,7 +17,7 @@ from sqlalchemy import select
 from starlette.background import BackgroundTask
 
 from app.api.dependencies import ActorDep, SessionDep, SettingsDep
-from app.api.v1.document_operations import _cleanup_directory, _clients
+from app.api.v1.document_operations import _aclose, _cleanup_directory, _clients
 from app.auth.actors import CurrentActor
 from app.auth.policies import require_role
 from app.auth.roles import Role
@@ -238,6 +238,7 @@ async def download_archive(
         local_store = FilesystemEvidenceStore(temporary_root)
         graph, sharepoint, _store = _clients(settings)
         try:
+            assert sharepoint is not None  # scheme is sharepoint, so the client exists
             result = await sharepoint.download_to_store(
                 drive_id,
                 item_id,
@@ -251,8 +252,7 @@ async def download_archive(
             shutil.rmtree(temporary_root, ignore_errors=True)
             raise
         finally:
-            await sharepoint.aclose()
-            await graph.aclose()
+            await _aclose(sharepoint, graph)
     elif parsed.scheme == "file" and settings.evidence_storage_backend == "filesystem":
         raw_path = unquote(parsed.path)
         if os.name == "nt" and raw_path.startswith("/"):

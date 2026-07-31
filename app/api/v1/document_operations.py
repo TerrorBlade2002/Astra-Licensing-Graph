@@ -18,7 +18,9 @@ from app.api.dependencies import ActorDep, SessionDep, SettingsDep
 from app.documents.authorization import DevelopmentDocumentAuthorization
 from app.documents.enums import SourceType
 from app.documents.naming import sanitize_download_filename
+from app.evidence.base import EvidenceStore
 from app.evidence.filesystem import FilesystemEvidenceStore
+from app.evidence.r2 import R2EvidenceStore
 from app.evidence.sharepoint import SharePointEvidenceStore
 from app.graph.auth import MsalConfidentialClientTokenProvider
 from app.graph.client import GraphHttpClient
@@ -26,6 +28,7 @@ from app.models import Document
 from app.repositories.documents import DocumentRepository
 from app.schemas.document import DocumentOut, PromoteAttachmentRequest, ReviewedDocumentMetadata
 from app.services.document_catalog import DocumentCatalogService
+from app.services.document_content import fetch_version_content
 from app.services.document_promotion import DocumentPromotionService
 from app.services.document_upload import DocumentUploadMetadata, DocumentUploadService
 from app.sharepoint.client import SharePointClient
@@ -39,7 +42,23 @@ def _metadata(value: ReviewedDocumentMetadata) -> DocumentUploadMetadata:
 
 def _clients(
     settings: SettingsDep,
-) -> tuple[GraphHttpClient, SharePointClient, SharePointEvidenceStore]:
+) -> tuple[GraphHttpClient | None, SharePointClient | None, EvidenceStore]:
+    """Clients for the *configured* storage backend.
+
+    Document governance is independent of where bytes land, so an upload must
+    follow ``EVIDENCE_STORAGE_BACKEND``. Requiring SharePoint here regardless
+    made the repository unusable whenever SharePoint was unavailable or not yet
+    provisioned — which is precisely when the fallback store is needed.
+    """
+    if settings.evidence_storage_backend == "r2":
+        return None, None, R2EvidenceStore(settings)
+    if settings.evidence_storage_backend == "filesystem":
+        if settings.app_env not in ("local", "test"):
+            raise HTTPException(
+                status_code=503,
+                detail="Filesystem document storage is not permitted in this environment.",
+            )
+        return None, None, FilesystemEvidenceStore(settings.filesystem_evidence_root)
     if not settings.sharepoint_enabled or not settings.sharepoint_site_id:
         raise HTTPException(status_code=503, detail="SharePoint repository is not enabled.")
     graph = GraphHttpClient(settings, MsalConfidentialClientTokenProvider(settings))
@@ -51,8 +70,15 @@ def _clients(
     )
 
 
+async def _aclose(*clients: GraphHttpClient | SharePointClient | None) -> None:
+    """Close only the clients a backend actually created."""
+    for client in clients:
+        if client is not None:
+            await client.aclose()
+
+
 def _uploader(
-    session: SessionDep, settings: SettingsDep, store: SharePointEvidenceStore
+    session: SessionDep, settings: SettingsDep, store: EvidenceStore
 ) -> DocumentUploadService:
     return DocumentUploadService(
         session,
@@ -101,8 +127,7 @@ async def manual_upload(
                 idempotency_key=idempotency_key,
             )
         finally:
-            await sharepoint.aclose()
-            await graph.aclose()
+            await _aclose(sharepoint, graph)
     finally:
         path.unlink(missing_ok=True)
     return outcome.document
@@ -127,8 +152,7 @@ async def promote_attachment(
             idempotency_key=body.idempotency_key,
         )
     finally:
-        await sharepoint.aclose()
-        await graph.aclose()
+        await _aclose(sharepoint, graph)
     return outcome.document
 
 
@@ -152,19 +176,19 @@ async def _download(
     store = FilesystemEvidenceStore(temp_root)
     graph, sharepoint, _sp_store = _clients(settings)
     try:
-        await sharepoint.download_to_store(
-            version.graph_drive_id,
-            version.graph_drive_item_id,
-            store,
-            "content",
+        await fetch_version_content(
+            version,
+            settings=settings,
+            sharepoint=sharepoint,
+            target=store,
+            target_key="content",
             max_bytes=settings.document_download_max_bytes,
         )
     except Exception:
         shutil.rmtree(temp_root, ignore_errors=True)
         raise
     finally:
-        await sharepoint.aclose()
-        await graph.aclose()
+        await _aclose(sharepoint, graph)
     DocumentRepository(session).add_event(
         document.id, "DOWNLOADED", actor_type="HUMAN", actor_id=actor.actor_id
     )
@@ -217,13 +241,20 @@ async def preview_document(
     if version is None:
         raise HTTPException(status_code=404, detail="Document version not found.")
     graph, sharepoint, _store = _clients(settings)
+    if sharepoint is None:
+        # Preview is a SharePoint rendering service. An object store has no
+        # equivalent, and minting a public URL for one would bypass the
+        # controlled-download path entirely.
+        raise HTTPException(
+            status_code=503,
+            detail="Document preview requires the SharePoint repository.",
+        )
     try:
         payload = await sharepoint.create_preview(
             version.graph_drive_id, version.graph_drive_item_id
         )
     finally:
-        await sharepoint.aclose()
-        await graph.aclose()
+        await _aclose(sharepoint, graph)
     url = payload.get("getUrl")
     if not url:
         raise HTTPException(status_code=502, detail="SharePoint did not return a preview.")
