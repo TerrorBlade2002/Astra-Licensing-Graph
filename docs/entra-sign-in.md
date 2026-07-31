@@ -101,6 +101,23 @@ from the token, and the capabilities derived from them. That response is the
 authoritative answer to "what am I allowed to do" — the portal renders its
 navigation from it.
 
+### Verified on staging, 2026-08-01
+
+`APP_ENV=staging` and `AUTH_MODE=entra` on backend, worker, and scheduler.
+
+| Check | Result |
+| --- | --- |
+| `/health/ready` | 200 |
+| `/api/v1/auth/me` without a token | 401 |
+| `/api/v1/auth/me` with `X-Actor-Id` / `X-Actor-Roles` headers | 401 — development actor headers no longer accepted |
+| `/api/v1/documents`, both `/integrations/*/status` | 401 |
+| Portal bundle | contains the tenant id, client id, and scope; contains no credential |
+| Worker | started, `environment="staging"` |
+| Scheduler cron | fired on schedule, `environment="staging"` |
+
+Role assignment was still outstanding at that point, so no account yet
+holds a licensing role.
+
 ## Reverting
 
 Set `AUTH_MODE=development` and `APP_ENV=local` on the backend. Development
