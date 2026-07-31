@@ -75,6 +75,38 @@ The portal shows the same information on the documents page, so an operator
 can tell at a glance whether they are looking at a SharePoint-backed or
 R2-backed repository.
 
+## Switching between backends
+
+One variable, on every service that writes or reads document content
+(`backend`, `worker`, and `browser-worker` when deployed):
+
+```
+EVIDENCE_STORAGE_BACKEND=sharepoint   # repository of record (default)
+EVIDENCE_STORAGE_BACKEND=r2           # object-store fallback
+```
+
+Upload, download, packet assembly, and tracker imports all follow that
+setting. A version written to an object store records its object key in the
+same column SharePoint uses for its drive item id, so content stays
+retrievable after a switch without any migration or lookup table.
+
+Two capabilities are SharePoint-only and fail with a clear 503 rather than
+degrading silently when R2 is active:
+
+| Capability | On R2 |
+| --- | --- |
+| Document preview (`POST /documents/{id}/preview`) | 503 — preview is a SharePoint rendering service; minting a public URL would bypass controlled download |
+| Promoting a `sharepoint://` email attachment | 503 — the source bytes live in SharePoint, so that path needs it enabled |
+
+Controlled download works on both, and is the supported way to read content.
+
+### Verified on staging, 2026-07-31
+
+A document uploaded through the deployed API was written to
+`astra-licensing-documents`, confirmed present in the bucket with matching
+content, and downloaded back through the API byte-for-byte. The test object
+was then deleted.
+
 ## Switching back to SharePoint
 
 Set `EVIDENCE_STORAGE_BACKEND=sharepoint` and redeploy. Documents already
