@@ -39,7 +39,8 @@ into it; follow [DEPLOYMENT.md](../DEPLOYMENT.md) and the go-live checklist.
 
 Normal path: merge or push to `main`. Railway deploys only services whose
 repo-root watch patterns match the changed files. A documentation-only commit
-is correctly reported as `SKIPPED`.
+is correctly reported as `SKIPPED`. GitHub auto-deploy is enabled for
+`backend`, `frontend`, `worker`, and `scheduler` in staging.
 
 Use a manual deployment only from a clean, synchronized `main` checkout:
 
