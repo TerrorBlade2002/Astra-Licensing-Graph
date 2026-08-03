@@ -8,6 +8,9 @@ Everything here uses Railway's own deployment, logs, variables, health checks,
 backups, and deployment history. No additional infrastructure, orchestration,
 or observability platform is introduced.
 
+For the concise source, ownership, live-link, and service map, see
+[`docs/deployment-reference.md`](docs/deployment-reference.md).
+
 ---
 
 ## 1. Project layout
@@ -497,5 +500,5 @@ documentation alone.
 | Health check fails; logs show `Invalid value for '--port': '$PORT'` | config commands run without a shell | wrap in `sh -c '…'` (also needed for `&&`) |
 | `ModuleNotFoundError` for a package that exists locally | `railway up` honours `.gitignore`; an unanchored pattern such as `evidence/` also matches `app/evidence/` | anchor root-only ignores with a leading slash |
 | `error parsing value for field "cors_origins"` | pydantic-settings JSON-decodes list fields before validators run | list settings are annotated `NoDecode` and accept `a,b` or `["a","b"]` |
-| Build reported `SKIPPED` | watch patterns are relative to the service root directory, so `frontend/**` under root `frontend` never matches | use `**` when a root directory is set |
+| Build reported `SKIPPED` unexpectedly | Railway evaluates watch patterns from the repository root, including when a service root directory is set | use `/frontend/**` for the frontend service and repo-root paths for other services |
 | A service builds the wrong Dockerfile | `railway up` uploads from the repo root regardless of the current directory | set `rootDirectory` and `railwayConfigFile` per service |
